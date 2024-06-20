@@ -1,5 +1,3 @@
-MSE Projekt:
-
 To Do:
 
 - [x] Fester Termin (regulärer Vorlesungstermin)
