@@ -2,12 +2,10 @@ To Do:
 
 - [x] Fester Termin (regulärer Vorlesungstermin)
   - DI: 16-18
-  - DO: 14:15-18 Uhr 
-  
+  - DO: 14:15-18 Uhr
+
 - [x] Repository erstellen —> Heinrich
 
+- [x] Wie wollen wir das alles speichern? Leightweight SQL Datenbank —> SQLite
 
-
-
-- [ ] Wie wollen wir das alles speichern? Leightweight SQL Datenbank —> SQLite
 - [ ] Idee User Interface/Gimmick
