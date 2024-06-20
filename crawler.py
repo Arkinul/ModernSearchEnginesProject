@@ -1,3 +1,6 @@
+import click
+import sqlite3
+
 #Add a document to the index. You need (at least) two parameters:
 	#doc: The document to be indexed.
 	#index: The location of the local index storing the discovered documents.
@@ -28,3 +31,37 @@ def crawl(frontier, index):
 
 	pass
 
+
+@click.group()
+def c():
+	pass
+
+
+@c.command()
+@click.option(
+	'--db',
+	default='index.db',
+	help='where to create the SQLite database file',
+	type=click.Path()
+)
+@click.option(
+	'--sql',
+	default='crawler.sql',
+	help='SQL to initialize database tables',
+	type=click.File()
+)
+def init_db(db, sql):
+	'''
+	Create database file and initialize tables with SQL script
+	'''
+	# https://stackoverflow.com/a/54290631
+	sql_script = sql.read()
+	db = sqlite3.connect(db)
+	cursor = db.cursor()
+	cursor.executescript(sql_script)
+	db.commit()
+	db.close()
+
+
+if __name__ == '__main__':
+	c()
