@@ -10,5 +10,20 @@ def index(doc, index):
 	#index: The location of the local index storing the discovered documents. 
 def crawl(frontier, index):
 	#TODO: Implement me
+
+	# seed set
+	# open database & fill frontier
+	# make requests
+	# database layout
+	# language detection
+		# HTML attribute
+	# determine if document is relevant
+		# to Tübingen
+		# for a search engine (ignore javascript, css?)
+		# detect duplicate
+	# save document to database
+	# extract URLs & add to frontier
+		# check whether URLs have been visited already
+
 	pass
 
