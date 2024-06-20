@@ -22,6 +22,7 @@ def crawl(frontier, index):
 		# for a search engine (ignore javascript, css?)
 		# detect duplicate
 	# save document to database
+		# last modified?
 	# extract URLs & add to frontier
 		# check whether URLs have been visited already
 
