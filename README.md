@@ -11,6 +11,3 @@ To Do:
 
 - [ ] Wie wollen wir das alles speichern? Leightweight SQL Datenbank —> SQLite
 - [ ] Idee User Interface/Gimmick
-
-- [ ] Text extrahieren
-- [ ] URLs finden 
