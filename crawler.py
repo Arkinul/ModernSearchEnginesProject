@@ -5,6 +5,7 @@ import beautifulsoup4
 import hashlib
 import re  # regex
 
+from contextlib import contextmanager
 
 #Add a document to the index. You need (at least) two parameters:
 #doc: The document to be indexed.
@@ -37,6 +38,29 @@ def crawl(frontier, index):
 
     pass
 
+
+class Index:
+	def __init__(self, db):
+		# https://docs.python.org/3/library/sqlite3.html#transaction-control
+		self.con = sqlite3.connect(db, isolation_level = None)
+
+	# SQLite works better in autocommit mode when using short DML (INSERT /
+	# UPDATE / DELETE) statements
+	# credit: https://github.com/litements/litequeue/blob/main/litequeue.py#L568
+	@contextmanager
+	def transaction(self, mode="DEFERRED"):
+		if mode not in {"DEFERRED", "IMMEDIATE", "EXCLUSIVE"}:
+			raise ValueError(f"Transaction mode '{mode}' is not valid")
+		# We must issue a "BEGIN" explicitly when running in auto-commit mode.
+		self.con.execute(f"BEGIN {mode}")
+		try:
+			# Yield control back to the caller.
+			yield
+		except BaseException as e:
+			self.con.rollback()  # Roll back all changes if an exception occurs.
+			raise e
+		else:
+			self.con.commit()
 
 @click.group()
 def c():
