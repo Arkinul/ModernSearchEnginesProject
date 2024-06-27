@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS "url" (
 );
 
 CREATE TABLE IF NOT EXISTS "frontier" (
+	"position"	INTEGER	UNIQUE,
 	"url_id"	INTEGER PRIMARY KEY,
 	FOREIGN KEY("url_id") REFERENCES "url"
 );
