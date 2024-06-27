@@ -62,6 +62,45 @@ class Index:
 		else:
 			self.con.commit()
 
+	def queue_url(self, url, position):
+		'''
+		Insert an URL into the `url` table and add it to the frontier at the given position
+		'''
+		# TODO: normalize URL
+		# TODO: unique constraint on url column, fetch existing ID if insert fails
+		with self.transaction():
+			cur = self.con.cursor()
+			# insert URL into url table
+			cur.execute(
+				"INSERT OR IGNORE INTO url (url) \
+				VALUES (?1)",
+				(url, )
+			)
+			url_id = cur.lastrowid
+
+			# push back
+			# can't be done in one statement due to this limitation:
+			# https://stackoverflow.com/a/7703239
+			cur.execute(
+				"UPDATE frontier \
+				SET position = -(position + 1) \
+				WHERE position >= ?1",
+				(position, )
+			)
+			cur.execute(
+				"UPDATE frontier \
+				SET position = abs(position) \
+				WHERE position < 0"
+			)
+
+			# insert frontier entry
+			cur.execute(
+				"INSERT INTO frontier (position, url_id) \
+				VALUES (?1, ?2)",
+				(position, url_id)
+			)
+
+
 @click.group()
 def c():
     pass
@@ -203,6 +242,29 @@ def check_duplicate(page_data):
     #TODO:insert page with new simhash into database
     existing_simhashes.append(simhash)
     return True
+
+
+@c.command()
+@click.option(
+	'--db',
+	default='index.db',
+	help='location of the SQLite database file',
+	type=click.Path()
+)
+@click.option(
+	'--urls',
+	default='seed.urls',
+	help='newline-separated list of URLs',
+	type=click.File()
+)
+def load_urls(db, urls):
+	'''
+	Load URLs from file and insert into the frontier
+	'''
+	index = Index(db)
+	for i, url in enumerate(urls):
+		print(f"queuing URL: {url.strip()}")
+		index.queue_url(url.strip(), i)
 
 
 if __name__ == '__main__':
