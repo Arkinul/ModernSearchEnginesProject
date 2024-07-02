@@ -68,7 +68,7 @@ class Index:
 		Insert an URL into the `url` table and add it to the frontier at the given position
 		'''
 		# TODO: normalize URL
-		# TODO: unique constraint on url column, fetch existing ID if insert fails
+		# TODO: fetch existing ID if insert fails
 		with self.transaction():
 			cur = self.con.cursor()
 			# insert URL into url table

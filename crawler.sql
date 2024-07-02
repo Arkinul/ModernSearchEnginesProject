@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS "document" (
 
 CREATE TABLE IF NOT EXISTS "url" (
 	"id"	INTEGER	PRIMARY KEY,
-	"url"	TEXT NOT NULL,
+	"url"	TEXT NOT NULL UNIQUE,
 	"document_id" INTEGER,
 	FOREIGN KEY("document_id") REFERENCES "document"
 );
