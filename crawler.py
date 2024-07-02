@@ -26,104 +26,104 @@ def crawl(frontier, index):
     # make requests
     # database layout
     # language detection
-    # HTML attribute
+        # HTML attribute
     # determine if document is relevant
-    # to Tübingen
-    # for a search engine (ignore javascript, css?)
-    # detect duplicate
+        # to Tübingen
+        # for a search engine (ignore javascript, css?)
+        # detect duplicate
     # save document to database
-    # last modified?
+        # last modified?
     # extract URLs & add to frontier
-    # check whether URLs have been visited already
+        # check whether URLs have been visited already
 
     pass
 
 
 class Index:
-	def __init__(self, db):
-		# https://docs.python.org/3/library/sqlite3.html#transaction-control
-		self.con = sqlite3.connect(db, isolation_level = None)
-		self.con.execute("PRAGMA foreign_keys = 1")
+    def __init__(self, db):
+        # https://docs.python.org/3/library/sqlite3.html#transaction-control
+        self.con = sqlite3.connect(db, isolation_level = None)
+        self.con.execute("PRAGMA foreign_keys = 1")
 
-	# SQLite works better in autocommit mode when using short DML (INSERT /
-	# UPDATE / DELETE) statements
-	# credit: https://github.com/litements/litequeue/blob/main/litequeue.py#L568
-	@contextmanager
-	def transaction(self, mode="DEFERRED"):
-		if mode not in {"DEFERRED", "IMMEDIATE", "EXCLUSIVE"}:
-			raise ValueError(f"Transaction mode '{mode}' is not valid")
-		# We must issue a "BEGIN" explicitly when running in auto-commit mode.
-		self.con.execute(f"BEGIN {mode}")
-		try:
-			# Yield control back to the caller.
-			yield
-		except BaseException as e:
-			self.con.rollback()  # Roll back all changes if an exception occurs.
-			raise e
-		else:
-			self.con.commit()
+    # SQLite works better in autocommit mode when using short DML (INSERT /
+    # UPDATE / DELETE) statements
+    # credit: https://github.com/litements/litequeue/blob/main/litequeue.py#L568
+    @contextmanager
+    def transaction(self, mode="DEFERRED"):
+        if mode not in {"DEFERRED", "IMMEDIATE", "EXCLUSIVE"}:
+            raise ValueError(f"Transaction mode '{mode}' is not valid")
+        # We must issue a "BEGIN" explicitly when running in auto-commit mode.
+        self.con.execute(f"BEGIN {mode}")
+        try:
+            # Yield control back to the caller.
+            yield
+        except BaseException as e:
+            self.con.rollback()  # Roll back all changes if an exception occurs.
+            raise e
+        else:
+            self.con.commit()
 
-	def queue_url(self, url, position):
-		'''
-		Insert an URL into the `url` table and add it to the frontier at the given position
-		'''
-		# TODO: normalize URL
-		with self.transaction():
-			print(f"queuing URL: {url}")
-			cur = self.con.cursor()
-			# check if URL is already in the URL table, also return position if already queued
-			id_and_position = cur.execute(
-				"SELECT id, frontier.position FROM url \
-				FULL OUTER JOIN frontier ON url.id = frontier.url_id \
-				WHERE url.url LIKE ?1",
-				(url, )
-			).fetchone()
-			#print(id_and_position)
-			if id_and_position:
-				url_id, prev_pos = id_and_position
-				if prev_pos is not None:
-					print(f"URL already queued at {prev_pos} with id {url_id}")
-					if position == prev_pos:
-						return
-					else:
-						raise NotImplementedError("TODO: move URL in queue")
-				else:
-					print(f"URL already stored with id {url_id}")
-			else:
-				# insert URL into url table
-				cur.execute(
-					"INSERT OR IGNORE INTO url (url) \
-					VALUES (?1)",
-					(url, )
-				)
-				if cur.rowcount == 1:
-					url_id = cur.lastrowid
-					print(f"{url_id}")
-				else:
-					print(f"failed to store URL {url} in table")
-					return
+    def queue_url(self, url, position):
+        '''
+        Insert an URL into the `url` table and add it to the frontier at the given position
+        '''
+        # TODO: normalize URL
+        with self.transaction():
+            print(f"queuing URL: {url}")
+            cur = self.con.cursor()
+            # check if URL is already in the URL table, also return position if already queued
+            id_and_position = cur.execute(
+                "SELECT id, frontier.position FROM url \
+                FULL OUTER JOIN frontier ON url.id = frontier.url_id \
+                WHERE url.url LIKE ?1",
+                (url, )
+            ).fetchone()
+            #print(id_and_position)
+            if id_and_position:
+                url_id, prev_pos = id_and_position
+                if prev_pos is not None:
+                    print(f"URL already queued at {prev_pos} with id {url_id}")
+                    if position == prev_pos:
+                        return
+                    else:
+                        raise NotImplementedError("TODO: move URL in queue")
+                else:
+                    print(f"URL already stored with id {url_id}")
+            else:
+                # insert URL into url table
+                cur.execute(
+                    "INSERT OR IGNORE INTO url (url) \
+                    VALUES (?1)",
+                    (url, )
+                )
+                if cur.rowcount == 1:
+                    url_id = cur.lastrowid
+                    print(f"{url_id}")
+                else:
+                    print(f"failed to store URL {url} in table")
+                    return
 
-			# push back
-			# can't be done in one statement due to this limitation:
-			# https://stackoverflow.com/a/7703239
-			cur.execute(
-				"UPDATE frontier \
-				SET position = -(position + 1) \
-				WHERE position >= ?1",
-				(position, )
-			)
-			cur.execute(
-				"UPDATE frontier \
-				SET position = abs(position) \
-				WHERE position < 0"
-			)
+            # push back
+            # can't be done in one statement due to this limitation:
+            # https://stackoverflow.com/a/7703239
+            cur.execute(
+                "UPDATE frontier \
+                SET position = -(position + 1) \
+                WHERE position >= ?1",
+                (position, )
+            )
+            cur.execute(
+                "UPDATE frontier \
+                SET position = abs(position) \
+                WHERE position < 0"
+            )
 
-			# insert frontier entry
-			cur.execute(
-				"INSERT INTO frontier (position, url_id) \
-				VALUES (?1, ?2)",
-				(position, url_id)
-			)
+            # insert frontier entry
+            cur.execute(
+                "INSERT INTO frontier (position, url_id) \
+                VALUES (?1, ?2)",
+                (position, url_id)
+            )
 
 
 @click.group()
@@ -146,8 +146,8 @@ def c():
 )
 def init_db(db, sql):
     """
-	Create database file and initialize tables with SQL script
-	"""
+    Create database file and initialize tables with SQL script
+    """
     # https://stackoverflow.com/a/54290631
     sql_script = sql.read()
     db = sqlite3.connect(db)
@@ -271,24 +271,24 @@ def check_duplicate(page_data):
 
 @c.command()
 @click.option(
-	'--db',
-	default='index.db',
-	help='location of the SQLite database file',
-	type=click.Path()
+    '--db',
+    default='index.db',
+    help='location of the SQLite database file',
+    type=click.Path()
 )
 @click.option(
-	'--urls',
-	default='seed.urls',
-	help='newline-separated list of URLs',
-	type=click.File()
+    '--urls',
+    default='seed.urls',
+    help='newline-separated list of URLs',
+    type=click.File()
 )
 def load_urls(db, urls):
-	'''
-	Load URLs from file and insert into the frontier
-	'''
-	index = Index(db)
-	for i, url in enumerate(urls):
-		index.queue_url(url.strip(), i)
+    '''
+    Load URLs from file and insert into the frontier
+    '''
+    index = Index(db)
+    for i, url in enumerate(urls):
+        index.queue_url(url.strip(), i)
 
 
 if __name__ == '__main__':
