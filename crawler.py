@@ -43,6 +43,7 @@ class Index:
 	def __init__(self, db):
 		# https://docs.python.org/3/library/sqlite3.html#transaction-control
 		self.con = sqlite3.connect(db, isolation_level = None)
+		self.con.execute("PRAGMA foreign_keys = 1")
 
 	# SQLite works better in autocommit mode when using short DML (INSERT /
 	# UPDATE / DELETE) statements
