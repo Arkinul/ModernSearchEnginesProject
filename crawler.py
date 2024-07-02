@@ -68,16 +68,40 @@ class Index:
 		Insert an URL into the `url` table and add it to the frontier at the given position
 		'''
 		# TODO: normalize URL
-		# TODO: fetch existing ID if insert fails
 		with self.transaction():
+			print(f"queuing URL: {url}")
 			cur = self.con.cursor()
-			# insert URL into url table
-			cur.execute(
-				"INSERT OR IGNORE INTO url (url) \
-				VALUES (?1)",
+			# check if URL is already in the URL table, also return position if already queued
+			id_and_position = cur.execute(
+				"SELECT id, frontier.position FROM url \
+				FULL OUTER JOIN frontier ON url.id = frontier.url_id \
+				WHERE url.url LIKE ?1",
 				(url, )
-			)
-			url_id = cur.lastrowid
+			).fetchone()
+			#print(id_and_position)
+			if id_and_position:
+				url_id, prev_pos = id_and_position
+				if prev_pos is not None:
+					print(f"URL already queued at {prev_pos} with id {url_id}")
+					if position == prev_pos:
+						return
+					else:
+						raise NotImplementedError("TODO: move URL in queue")
+				else:
+					print(f"URL already stored with id {url_id}")
+			else:
+				# insert URL into url table
+				cur.execute(
+					"INSERT OR IGNORE INTO url (url) \
+					VALUES (?1)",
+					(url, )
+				)
+				if cur.rowcount == 1:
+					url_id = cur.lastrowid
+					print(f"{url_id}")
+				else:
+					print(f"failed to store URL {url} in table")
+					return
 
 			# push back
 			# can't be done in one statement due to this limitation:
@@ -264,7 +288,6 @@ def load_urls(db, urls):
 	'''
 	index = Index(db)
 	for i, url in enumerate(urls):
-		print(f"queuing URL: {url.strip()}")
 		index.queue_url(url.strip(), i)
 
 
