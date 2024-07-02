@@ -1,7 +1,7 @@
 import click
 import sqlite3
 import requests
-import beautifulsoup4
+from bs4 import BeautifulSoup
 import hashlib
 import re  # regex
 
