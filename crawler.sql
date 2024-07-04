@@ -21,6 +21,13 @@ CREATE TABLE IF NOT EXISTS "frontier" (
 	FOREIGN KEY("url_id") REFERENCES "url"
 );
 
+CREATE VIEW IF NOT EXISTS "frontier_urls" AS
+	SELECT
+		frontier.position AS 'position',
+		url.url AS 'URL'
+	FROM frontier
+	JOIN url ON url_id = url.id
+	ORDER BY frontier.position;
 
 COMMIT;
 
