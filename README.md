@@ -14,7 +14,7 @@ To Do:
 
 
 Crawling
-- [ ] Requests fertig (Spracherkennung etc.) (Heinrich)
+- [ ] Requests fertig (Spracherkennung im HTTP Header etc.) (Heinrich)
 - [ ] Links im Parsing (Heinrich)
 - [ ] relevance check testen/tunen (Petros)
 - [ ] robots.txt respektieren (Albert)
