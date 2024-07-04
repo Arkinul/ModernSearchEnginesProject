@@ -66,6 +66,17 @@ class Index:
 
 
 class Queue(Index):
+    def __iter__(self):
+        return self
+
+
+    def __next__(self):
+        if entry := self.pop():
+            return entry
+        else:
+            raise StopIteration
+
+
     def shift(self, cur, position, amount = 1):
         '''
         Move all rows in the frontier >= `position` back by `amount`
