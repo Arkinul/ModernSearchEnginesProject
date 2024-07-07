@@ -393,7 +393,6 @@ def is_allowed_by_robots(url):
     '''
     host = get_host(url)
     if host not in robots_cache:
-        print(f"Fetching robots.txt for {host}")
         robots_txt_url = host + "/robots.txt"
         rp = RobotFileParser()
         rp.set_url(robots_txt_url)
