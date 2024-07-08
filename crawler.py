@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from urllib.parse import urlparse
 from urllib.robotparser import RobotFileParser
 from url_normalize import url_normalize
+from datetime import datetime, timedelta
 
 #Add a document to the index. You need (at least) two parameters:
 #doc: The document to be indexed.
@@ -365,7 +366,7 @@ def check_duplicate(page_data):
     return True
 
 
-#TODO: Instead of robots_cache dictonary use database to save and fetch robots.txt
+#TODO: Instead of robots_cache dictonary use database to save and fetch robots.txt. We probably need an additional field for the robots.txt in the database
 robots_cache = {}
 
 def get_host(url):
@@ -419,6 +420,40 @@ def normalize_url(url):
     str: The normalized URL.
     '''
     return url_normalize(url)
+
+#WARNING: Hasn't been tested yet 
+def should_crawl(con, url, recrawl_interval_days=30):
+    '''
+    Determines if the given URL should be crawled based on whether it has been previously crawled
+    and the time since it was last modified or fetched.
+
+    Parameters:
+    con (sqlite3.Connection): Active SQLite database connection.
+    url (str): The URL to be checked.
+    recrawl_interval_days (int): The interval in days after which a URL should be recrawled. Default is 30 days.
+
+    Returns:
+    bool: True if the URL should be crawled, False otherwise.
+    '''
+    cur = con.cursor()
+    cur.execute("SELECT document_id, (SELECT last_modified FROM document WHERE id = document_id) FROM url WHERE url = ?", (url,))
+    result = cur.fetchone()
+    
+    if result:
+        document_id, last_modified = result
+        if document_id:
+            if last_modified:
+                last_modified_date = datetime.fromtimestamp(last_modified)
+                if datetime.now() - last_modified_date > timedelta(days=recrawl_interval_days):
+                    return True
+            else:
+                cur.execute("SELECT fetched FROM document WHERE id = ?", (document_id,))
+                fetched = cur.fetchone()[0]
+                fetched_date = datetime.fromtimestamp(fetched)
+                if datetime.now() - fetched_date > timedelta(days=recrawl_interval_days):
+                    return True
+            return False
+    return True
 
 
 
