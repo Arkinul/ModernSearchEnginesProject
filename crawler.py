@@ -8,6 +8,7 @@ import warnings
 from contextlib import contextmanager
 from urllib.parse import urlparse
 from urllib.robotparser import RobotFileParser
+from url_normalize import url_normalize
 
 #Add a document to the index. You need (at least) two parameters:
 #doc: The document to be indexed.
@@ -405,6 +406,20 @@ def is_allowed_by_robots(url):
         return True
     else:
         return False
+    
+
+def normalize_url(url):
+    '''
+    Normalize the given URL using the url-normalize library.
+
+    Parameters:
+    url (str): The URL to be normalized.
+
+    Returns:
+    str: The normalized URL.
+    '''
+    return url_normalize(url)
+
 
 
 
