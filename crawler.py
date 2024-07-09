@@ -346,7 +346,7 @@ def compute_simhash(texts, k=5):
     return fingerprint
 
 def hamming_distance(x, y):
-    return bin(x ^ y).count('1')
+    return (x ^ y).bit_count()
 
 #TODO:set appropiate treshold (might need some more testing)
 def is_near_duplicate_simhash(simhash1, simhash2, threshold=15):
