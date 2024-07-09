@@ -10,6 +10,9 @@ from urllib.parse import urlparse
 from urllib.robotparser import RobotFileParser
 from url_normalize import url_normalize
 from datetime import datetime, timedelta
+from collections import Counter
+from nltk.stem import PorterStemmer
+
 
 #Add a document to the index. You need (at least) two parameters:
 #doc: The document to be indexed.
@@ -285,9 +288,9 @@ def html_cleaner(response, url):
     irrelevant_tags = [
         "script", "style", "link", "meta", "header", "nav", "aside", "footer", "form", 
         "iframe", "template", "button", "input", "select", "textarea", "label",
-        "img", "picture", "svg", "canvas", "audio", "video", "embed", "object", 
+        "img", "picture", "svg", "canvas", "audio", "video", "object",
         "param", "source", "track", "noscript", "map", "area", "figure", "figcaption", 
-        "details", "summary", "dialog", "menu", "menuitem", "applet", "embed", "object"
+        "details", "summary", "dialog", "menu", "menuitem", "applet", "embed"
     ]
 
     for tag in soup(irrelevant_tags):
@@ -312,13 +315,47 @@ def html_cleaner(response, url):
 
 def is_relevant(content):
     keywords = [
-    "tübingen", "hölderlin", "hohenzollern",
-    "neckar", "schwaben", "schwäbisch", "tübinger",
-    "bebenhausen"]
-    for keyword in keywords:
-        if keyword in content:
-            return True
-    return False
+        "tübingen", "hölderlin", "hohenzollern",
+        "neckar", "schwaben", "schwäbisch", "tübinger",
+        "bebenhausen", "tubingen", "tuebingen", "tuebinger",
+        "swabian", "schwaebisch", "schwabisch"
+    ]
+
+    # Initialize stemmer, probably not needed yet for the current keyword list,
+    # but possibly in the future (transforms e.g. meeting -> meet)
+    # https://www.nltk.org/howto/stem.html
+    stemmer = PorterStemmer()
+
+    content_lower = content.lower()
+    words = re.findall(r'\b\w+\b', content_lower)  # Regex to tokenize individual words on a site
+    stemmed_words = [stemmer.stem(word) for word in words]  # Stem words on site
+
+    stemmed_keywords = {stemmer.stem(keyword) for keyword in keywords}  # Stem keywords as well
+
+    # Count how often each word appears on a site and the number of total words
+    word_counts = Counter(stemmed_words)
+    total_words = len(stemmed_words)
+
+    # Count the number of relevant words on a site
+    relevant_count = 0
+    for word in stemmed_keywords:
+        if word in word_counts:
+            relevant_count += word_counts[word]
+
+    # Keyword density = out of all words, how many of them are keywords
+    # We can use this instead of a binary relevancy check and adjust the threshold below
+    # Probably (?) better than only relevant or not
+    if total_words > 0:
+        keyword_density = relevant_count / total_words
+    else:
+        keyword_density = 0
+
+    # Adjust threshold here
+    keyword_density_threshold = 0.01  # e.g. if 1 out of 100 words is a keyword, site is relevant
+
+    is_relevant_content = keyword_density >= keyword_density_threshold
+
+    return is_relevant_content
 
 def shingle(text, k=5):
     return set(text[i:i+k] for i in range(len(text) - k + 1))
