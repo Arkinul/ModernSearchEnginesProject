@@ -265,26 +265,30 @@ def init_db(db, sql):
     required=True
 )
 def url_request(url):
+    headers = {"Accept-Language": "en-US,en,en-GB"}
     try:
-        response = requests.get(url, headers={"Accept-Language": "en-US,en,en-GB;q=0.5"})
+        response = requests.get(url, headers=headers)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         print(f'Error: {e}')
         return None
     print(response.text)
-    isenglish = re.search('lang="en"', response.text) is not None
-    print(isenglish)
-    return response.text, isenglish
+    print(response.headers)
+    lang = response.headers.get('Content-Language', 'unknown')
+    print(f'Language: {lang}')
+
+    return response.text, response.url, response.headers, lang
 
 
 
 def html_cleaner(response, url):
     soup = BeautifulSoup(response.content, 'html.parser')
+    lang = soup.html.get('lang', 'unknown') if soup.html else 'unknown'
     title = soup.title.string if soup.title else 'No Title'
     meta_description = ''
     if soup.find("meta", attrs={"name": "description"}):
         meta_description = soup.find("meta", attrs={"name": "description"}).get("content", "")
-
+    links = [link.get('href') for link in soup.find_all('a', href=True)]
     irrelevant_tags = [
         "script", "style", "link", "meta", "header", "nav", "aside", "footer", "form", 
         "iframe", "template", "button", "input", "select", "textarea", "label",
@@ -305,8 +309,10 @@ def html_cleaner(response, url):
         #TODO:instead of dictonary put it into the database
         page_data = {
             'url': url,
+            'lang': lang,
             'title': title,
             'meta_description': meta_description,
+            'links': links,
             'text_content': text_content
         }
         return page_data
