@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 from nltk.stem import PorterStemmer
 from url_normalize import url_normalize
-
+import re
 
 def html_cleaner(response, url):
     soup = BeautifulSoup(response.content, 'html.parser')
@@ -44,12 +44,12 @@ def html_cleaner(response, url):
         return page_data
 
 def is_relevant(content):
-    keywords = [
-        "tübingen", "hölderlin", "hohenzollern",
-        "neckar", "schwaben", "schwäbisch", "tübinger",
-        "bebenhausen", "tubingen", "tuebingen", "tuebinger",
-        "swabian", "schwaebisch", "schwabisch"
-    ]
+    keywords = {
+        "tübingen": 1.0, "hölderlin": 1.0, "hohenzollern": 1.0,
+        "neckar": 1.0, "schwaben": 1.0, "schwäbisch": 1.0, "tübinger": 1.0,
+        "bebenhausen": 1.0, "tubingen": 1.0, "tuebingen": 1.0, "tuebinger": 1.0,
+        "swabian": 1.0, "schwaebisch": 1.0, "schwabisch": 1.0
+    }
 
     # Initialize stemmer, probably not needed yet for the current keyword list,
     # but possibly in the future (transforms e.g. meeting -> meet)
@@ -60,7 +60,7 @@ def is_relevant(content):
     words = re.findall(r'\b\w+\b', content_lower)  # Regex to tokenize individual words on a site
     stemmed_words = [stemmer.stem(word) for word in words]  # Stem words on site
 
-    stemmed_keywords = {stemmer.stem(keyword) for keyword in keywords}  # Stem keywords as well
+    stemmed_keywords = {stemmer.stem(keyword): weight for keyword, weight in keywords.items()}  # Stem keywords as well
 
     # Count how often each word appears on a site and the number of total words
     word_counts = Counter(stemmed_words)
@@ -68,9 +68,9 @@ def is_relevant(content):
 
     # Count the number of relevant words on a site
     relevant_count = 0
-    for word in stemmed_keywords:
+    for word, weight in stemmed_keywords.items():
         if word in word_counts:
-            relevant_count += word_counts[word]
+            relevant_count += word_counts[word] * weight
 
     # Keyword density = out of all words, how many of them are keywords
     # We can use this instead of a binary relevancy check and adjust the threshold below
