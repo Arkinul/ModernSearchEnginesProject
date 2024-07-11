@@ -1,0 +1,64 @@
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #f0f0f0;
+}
+
+.container {
+    text-align: center;
+}
+
+#searchBar {
+    width: 400px;
+    padding: 20px;
+    font-size: 14px;
+    margin-bottom: 60px;
+    transition: opacity 0.5s ease-out;
+    background-color: #c6c6c6;
+    outline-color:transparent;
+    border-color: transparent;
+
+    
+    
+}
+
+#wordCloudContainer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 60%;
+    margin: 0 auto;
+    margin-top: auto;
+    transition: opacity 0.5s ease-in;
+}
+#backButton {
+    margin-top: 20px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    
+    
+}
+
+
+.word {
+    margin: 5px;
+    font-weight: bold;
+    transition: transform 0.3s;
+}
+
+.word:hover {
+    transform: scale(1.2);
+}
+
+.hidden {
+    opacity: 0;
+}
+
+.visible {
+    opacity: 1;
+}
