@@ -30,31 +30,47 @@ pip install -r requirements.txt
 
 
 Crawling
-- [ ] Requests fertig (Spracherkennung im HTTP Header etc.) (Heinrich)
-- [ ] Links im Parsing (Heinrich)
-- [ ] relevance check testen/tunen (Petros)
+- [x] Requests fertig (Spracherkennung im HTTP Header etc.) (Heinrich)
+- [ ] Requests verfeinern (Timeouts etc.)
+- [x] Links im Parsing (Heinrich)
+- [x] relevance check testen/tunen (Petros)
+- [ ] Crawling zusammensetzen(Constantin)
 - [ ] robots.txt respektieren (Albert)
+  - Hostdatenbank
   - library (https://docs.python.org/3/library/urllib.robotparser.html ?)
   - cache / index robots.txt (maybe processsed) per host
   - extract host from URL (public suffix list)
 - [ ] Docs in DB (main vom crawler) (Constantin)
 - [ ] duplicate check (Vergleich/speichern der simhashes) (Constantin)
-- [ ] URL Normalisierung (Albert)
+- [x] URL Normalisierung (Albert)
   - überlegen, wie man das testet
+- [ ] last modified speichern (Heinrich)
 - [ ] URL checken, ob schon besucht (Albert)
   - (Seiten recrawlen, regelmäßig)
-- [ ] crawler.py aufsplitten in mehrere Dateien
+- [x] crawler.py aufsplitten in mehrere Dateien
+- [ ] Request-Log in DB
+  - mit Status, Content (raw)
+  - doc ist Abstraktion von Request ( oder so ähnlich)
 
 Indexing
+- [ ] Datenbankschema 
 - [ ] tokenization
+  - mit Library hoffentlich
 - [ ] Wortliste
-- [ ] Inverted index tabelle
+- [ ] Inverted index Tabelle
+- [ ] evtl. bigrams + fielded
 
 Retrieval
-- [ ] erstmal BM25
+- [ ] erstmal BM25 (Albert)
+- [ ] evtl. LDA (Albert)
 
 Interface
-- [ ] erstmal funktionsfähig, dann fancy (Luisa)
+- [x] erstmal funktionsfähig, dann fancy (Luisa)
+- [ ] Icons 
+- [ ] evtl. Boxen oder so
+- [ ] verbinden mit Rest
+  - klickbar
+  - echte Ergebnisse
 
 Report
 - [ ] die ganze Zeit Notizen machen, möglichst

@@ -55,9 +55,11 @@ def url_request(url):
     print(response.text)
     print(response.headers)
     lang = response.headers.get('Content-Language', 'unknown')
+    type = response.headers.get('Content-Type', 'unknown')
     print(f'Language: {lang}')
+    print(f'Type: {type}')
 
-    return response.text, response.url, response.headers, lang
+    return response.text, response.url, response.headers, lang, type
 
 
 @c.command()
