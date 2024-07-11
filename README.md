@@ -1,4 +1,17 @@
-To Do:
+# Usage
+
+Crawler CLI:
+```
+python -m crawl.cli
+```
+
+Requirements (nach-)installieren:
+```
+pip install -r requirements.txt
+```
+
+
+# To Do:
 
 - [x] Fester Termin (regulärer Vorlesungstermin)
   - DI: 16-18
