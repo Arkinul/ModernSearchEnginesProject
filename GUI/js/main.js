@@ -1,6 +1,16 @@
 document.addEventListener('DOMContentLoaded', () => {
     const searchBar = document.getElementById('searchBar');
     const wordCloudContainer = document.getElementById('wordCloudContainer');
+    const container = document.querySelector('.container');
+    const closeButton = document.getElementById('closeButton');
+
+    searchBar.addEventListener('input', () => {
+        if (searchBar.value) {
+            closeButton.style.display = 'block';
+        } else {
+            closeButton.style.display = 'none';
+        }
+    });
 
     searchBar.addEventListener('keypress', (event) => {
         if (event.key === 'Enter') {
@@ -8,22 +18,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const query = searchBar.value.trim();
             if (query) {
                 generateWordCloud(query);
-                searchBar.classList.add('hidden');
-                wordCloudContainer.classList.remove('hidden');
+                container.classList.add('moved-up');
+                fadeIn(wordCloudContainer);
             }
         }
     });
-    backButton.addEventListener('click', () => {
+
+    closeButton.addEventListener('click', () => {
+        searchBar.value = '';
+        closeButton.style.display = 'none';
         fadeOut(wordCloudContainer, () => {
             wordCloudContainer.classList.add('hidden');
-            fadeOut(backButton, () => {
-                backButton.classList.add('hidden');
-                searchBar.classList.remove('hidden');
-                fadeIn(searchBar);
-            });
+            wordCloudContainer.innerHTML = '';
+            container.classList.remove('moved-up');
         });
     });
-
 
     function generateWordCloud(query) {
         // Simulate search result data
@@ -34,20 +43,34 @@ document.addEventListener('DOMContentLoaded', () => {
             { text: 'Neckar river', value: 50 },
             { text: 'Top 10 Restaurants in Tübingen', value: 40 },
             { text: 'University Hospital Tübingen', value: 30 },
-            { text: 'Cyber Valley', value: 10 }
+            { text: 'Epplehaus', value: 20 },
+            { text: 'Castle Hohentübingen', value: 20 },
+            { text: 'Cyber Valley', value: 20 },
+            { text: 'neptune fountain', value: 35},
+            { text: 'Botanical garden', value: 20 },
+            { text: 'Neckarmüller', value: 20 },
+
             // Add more words as needed
         ];
 
         wordCloudContainer.innerHTML = '';
 
-        results.forEach(word => {
+        results.forEach((word) => {
             const wordElement = document.createElement('span');
             wordElement.textContent = word.text;
             wordElement.style.fontSize = `${word.value / 2}px`;
             wordElement.classList.add('word');
             wordCloudContainer.appendChild(wordElement);
+
+            // Random delay to each word's appearance
+            const randomDelay = Math.random() * 2000;
+            setTimeout(() => {
+                wordElement.style.opacity = 1;
+                wordElement.style.transform = 'scale(1)';
+            }, randomDelay);
         });
     }
+
     function fadeOut(element, callback) {
         element.style.opacity = 1;
 
@@ -63,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function fadeIn(element) {
         element.style.opacity = 0;
-        element.style.display = "flex";
+        element.style.display = "flex";  // Ensure element is visible
 
         (function fade() {
             let val = parseFloat(element.style.opacity);

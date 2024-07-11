@@ -10,11 +10,12 @@ body {
 
 .container {
     text-align: center;
+    transition: transform 0.5s ease-out;
 }
 
 #searchBar {
     width: 400px;
-    padding: 20px;
+    padding: 10px 30px 10px 10px; ;
     font-size: 14px;
     margin-bottom: 60px;
     transition: opacity 0.5s ease-out;
@@ -35,20 +36,23 @@ body {
     margin-top: auto;
     transition: opacity 0.5s ease-in;
 }
-#backButton {
-    margin-top: 20px;
-    padding: 10px 20px;
-    font-size: 16px;
-    cursor: pointer;
-    
-    
-}
 
+.close-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 20px;
+    cursor: pointer;
+    color: #000;
+    display: none;  /* Hidden by default */
+}
 
 .word {
     margin: 5px;
     font-weight: bold;
-    transition: transform 0.3s;
+    opacity: 0;
+    transition: opacity 0.5s ease-in, transform 0.5s ease-in;
 }
 
 .word:hover {
@@ -61,4 +65,7 @@ body {
 
 .visible {
     opacity: 1;
+}
+.moved-up {
+    transform: translateY(-150px);
 }

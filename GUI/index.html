@@ -2,15 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=4.0">
-    <title>MSE Search Engine</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MSE Word Cloud</title>
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
     <div class="container">
-        <input type="text" id="searchBar" placeholder="Search related to Tübingen ...">
+        <div class="search-container">
+            <input type="text" id="searchBar" placeholder="Your query related to Tübingen...">
+            <span id="closeButton" class="close-btn">&times;</span> 
+        </div>
         <div id="wordCloudContainer" class="hidden"></div>
-        <button id="backButton" class="hidden">Back to Search</button>
+        
     </div>
     <script src="js/main.js"></script>
 </body>
