@@ -8,6 +8,9 @@ To Do:
 
 - [x] Wie wollen wir das alles speichern? Leightweight SQL Datenbank —> SQLite
 
+- [ ] Idee Crawling Gimmick / "Innovation"
+  - auch PDFs crawlen & indizieren
+
 - [ ] Idee User Interface/Gimmick
   - Mindmap/wordcloud?
 

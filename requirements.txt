@@ -2,3 +2,4 @@ click
 beautifulsoup4
 requests
 url-normalize
+nltk
