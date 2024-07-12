@@ -65,7 +65,7 @@ def url_request(url):
 @c.command()
 @click.option(
     '--db',
-    default='index.db',
+    default='crawler.db',
     help='location of the SQLite database file',
     type=click.Path()
 )
