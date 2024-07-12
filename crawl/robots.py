@@ -50,6 +50,7 @@ class Host:
         else:
             raw = f.read()
             self.rfp.parse(raw.decode("utf-8").splitlines())
+            # TODO: log this instead of printing
             print(f"fetched robots.txt for {self.origin}")
 
             # No global allow/disallow policy, store the robots.txt content
@@ -70,7 +71,9 @@ class Host:
 
         self.updated = time.time()
         # start with full token bucket
+        # TODO: seems to overshoot the intended rate in the very first period
         self.tokens = self.refill_cap
+        # TODO: keep track of how old the robots.txt / host entry is
         self.con.execute(
             "INSERT OR REPLACE INTO host ( \
                 origin, \
