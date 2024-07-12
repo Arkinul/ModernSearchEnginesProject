@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function generateWordCloud(query) {
-        // Simulate search result data
+        // Search result data
         const results = [
             { text: 'Tübingen Concerts', value: 100 },
             { text: 'University of Tübingen', value: 80 },
@@ -50,7 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
             { text: 'Botanical garden', value: 20 },
             { text: 'Neckarmüller', value: 20 },
 
-            // Add more words as needed
         ];
 
         wordCloudContainer.innerHTML = '';
@@ -86,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function fadeIn(element) {
         element.style.opacity = 0;
-        element.style.display = "flex";  // Ensure element is visible
+        element.style.display = "flex";
 
         (function fade() {
             let val = parseFloat(element.style.opacity);
