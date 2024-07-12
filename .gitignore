@@ -161,4 +161,8 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
+crawler.db
 index.db
+hosts.db
+
+**/.DS_Store

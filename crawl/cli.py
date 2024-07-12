@@ -14,7 +14,7 @@ def c():
 @c.command()
 @click.option(
     '--db',
-    default='index.db',
+    default='crawler.db',
     help='where to create the SQLite database file',
     type=click.Path()
 )
@@ -80,7 +80,7 @@ def load_urls(db, urls):
     Load URLs from file and insert into the frontier
     '''
     queue = Queue(db)
-    for i, url in enumerate(urls):
+    for url in urls:
         queue.push(url.strip())
 
 

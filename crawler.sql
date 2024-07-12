@@ -7,6 +7,17 @@ CREATE TABLE IF NOT EXISTS "document" (
 	"content"	TEXT
 );
 
+CREATE TABLE IF NOT EXISTS "request" (
+	"id"	INTEGER NOT NULL PRIMARY KEY,
+	"url_id"	INTEGER NOT NULL,
+	"fetched"	REAL NOT NULL,
+	"duration"	REAL NOT NULL,
+	"last_modified"	INTEGER,
+	"status"	INTEGER,
+	"headers"	TEXT,
+	"data"	BLOB,
+	FOREIGN KEY("url_id") REFERENCES "url"
+);
 
 CREATE TABLE IF NOT EXISTS "url" (
 	"id"	INTEGER	PRIMARY KEY,
