@@ -163,3 +163,5 @@ cython_debug/
 
 index.db
 hosts.db
+
+.DS_Store
