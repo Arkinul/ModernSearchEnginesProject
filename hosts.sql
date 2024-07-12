@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS "host" (
 	"origin"		TEXT NOT NULL UNIQUE,
 	"global_policy"	BOOL,
 	"robots_txt"	TEXT,
-	"refill_delay"	REAL,
+	"refill_rate"	REAL,
 	"refill_cap"	REAL CHECK(refill_cap >= 0),
 	"updated"	REAL,
 	"tokens"	REAL CHECK(tokens >= 0 AND tokens <= refill_cap)

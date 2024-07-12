@@ -9,7 +9,7 @@ from urllib.robotparser import RobotFileParser
 # TODO: actually use this when making requests
 USER_AGENT = 'MSE_Crawler'
 DEFAULT_REFILL_CAP = 10
-DEFAULT_REFILL_DELAY = 30
+DEFAULT_REFILL_RATE = DEFAULT_REFILL_CAP / 30
 
 # TODO: make this configurable / robust
 HOSTS_DB_SQL = "hosts.sql"
@@ -44,7 +44,7 @@ class Host:
                     f"failed to fetch robots for {self.origin}: {err}"
                 )
             self.refill_cap = DEFAULT_REFILL_CAP
-            self.refill_delay = DEFAULT_REFILL_DELAY
+            self.refill_rate = DEFAULT_REFILL_RATE
             self.tokens = DEFAULT_REFILL_CAP
             robots_txt = None
         else:
@@ -60,13 +60,13 @@ class Host:
 
             if rate := self.rfp.request_rate(USER_AGENT):
                 self.refill_cap = rate.requests
-                self.refill_delay = rate.seconds
+                self.refill_rate = rate.seconds
             elif delay := self.rfp.crawl_delay(USER_AGENT):
                 self.refill_cap = 1
-                self.refill_delay = float(delay)
+                self.refill_rate = 1 / float(delay)
             else:
                 self.refill_cap = DEFAULT_REFILL_CAP
-                self.refill_delay = DEFAULT_REFILL_DELAY
+                self.refill_rate = DEFAULT_REFILL_RATE
 
         self.updated = time.time()
         # start with full token bucket
@@ -76,7 +76,7 @@ class Host:
                 origin, \
                 global_policy, \
                 robots_txt, \
-                refill_delay, \
+                refill_rate, \
                 refill_cap, \
                 updated, \
                 tokens \
@@ -86,7 +86,7 @@ class Host:
                 self.origin,
                 self.global_policy,
                 robots_txt,
-                self.refill_delay,
+                self.refill_rate,
                 self.refill_cap,
                 self.updated,
                 self.tokens
@@ -107,7 +107,7 @@ class Host:
             self.con.execute(
                 "UPDATE host \
                 SET tokens = MIN( \
-                        tokens + ((?2 - updated) / refill_delay * refill_cap), \
+                        tokens + ((?2 - updated) * refill_rate), \
                         refill_cap \
                     ) - 1, \
                     updated = ?2 \
@@ -119,7 +119,7 @@ class Host:
             # TODO: logging
             # constraint violated because bucket is empty
             # calculate remaining time
-            needed = (1 - self.tokens) * self.refill_delay / self.refill_cap
+            needed = (1 - self.tokens) / self.refill_rate
             waited = now - self.updated
             # TODO: should only happen due to concurrent update, retry instantly
             assert needed > waited, f"{self.origin}, should have tokens"
@@ -134,7 +134,7 @@ class Host:
                 origin, \
                 global_policy, \
                 robots_txt, \
-                refill_delay, \
+                refill_rate, \
                 refill_cap, \
                 updated, \
                 tokens \
@@ -147,7 +147,7 @@ class Host:
                 self.origin,
                 self.global_policy,
                 robots_txt,
-                self.refill_delay,
+                self.refill_rate,
                 self.refill_cap,
                 self.updated,
                 self.tokens
