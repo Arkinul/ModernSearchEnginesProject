@@ -14,7 +14,7 @@ def c():
 @c.command()
 @click.option(
     '--db',
-    default='index.db',
+    default='crawler.db',
     help='where to create the SQLite database file',
     type=click.Path()
 )
