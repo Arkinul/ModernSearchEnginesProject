@@ -7,17 +7,19 @@ CREATE TABLE IF NOT EXISTS "document" (
 	"content"	TEXT
 );
 
+-- Use "status" either as INTEGER status code or REAL timestamp
+-- ANY + STRICT to ensure these don't get mixed up
+-- https://www.sqlite.org/stricttables.html#strict_tables
 CREATE TABLE IF NOT EXISTS "request" (
 	"id"	INTEGER NOT NULL PRIMARY KEY,
 	"url_id"	INTEGER NOT NULL,
-	"fetched"	REAL NOT NULL,
-	"duration"	REAL NOT NULL,
-	"last_modified"	INTEGER,
-	"status"	INTEGER,
+	"time"	REAL NOT NULL,
+	"duration"	REAL,
+	"status"	ANY,
 	"headers"	TEXT,
 	"data"	BLOB,
 	FOREIGN KEY("url_id") REFERENCES "url"
-);
+) STRICT;
 
 CREATE TABLE IF NOT EXISTS "url" (
 	"id"	INTEGER	PRIMARY KEY,
