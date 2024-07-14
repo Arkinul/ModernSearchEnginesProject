@@ -3,6 +3,7 @@ import sqlite3
 import requests
 import re
 
+from crawl import DEFAULT_CRAWLER_DB
 from crawl.queue import Queue
 
 
@@ -14,7 +15,7 @@ def c():
 @c.command()
 @click.option(
     '--db',
-    default='crawler.db',
+    default=DEFAULT_CRAWLER_DB,
     help='where to create the SQLite database file',
     type=click.Path()
 )
