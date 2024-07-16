@@ -42,5 +42,18 @@ CREATE VIEW IF NOT EXISTS "frontier_urls" AS
 	JOIN url ON url_id = url.id
 	ORDER BY frontier.position;
 
+CREATE VIEW IF NOT EXISTS "request_urls" AS
+	SELECT
+		id,
+		url.url AS 'URL',
+		time,
+		duration,
+		status,
+		headers,
+		data
+	FROM request
+	JOIN url ON url_id = url.id
+	ORDER BY time;
+
 COMMIT;
 
