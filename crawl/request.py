@@ -4,6 +4,7 @@ import time
 import requests
 
 from crawl import DEFAULT_CRAWLER_DB
+from crawl.document import Document
 from crawl.robots import USER_AGENT
 
 
@@ -174,6 +175,7 @@ class Request:
         self.headers = None
         self.data = None
         self.url = url
+        self.id = None
 
 
     @staticmethod
@@ -232,7 +234,7 @@ class Request:
         return self.data is not None
 
 
-    def save(self, db=DEFAULT_CRAWLER_DB):
+    def save(self, db=DEFAULT_CRAWLER_DB) -> int:
         """
         Store the request in the database.
         Assumes the URL already exists in the `url` table
@@ -256,7 +258,21 @@ class Request:
                 headers, \
                 data \
             ) \
-            VALUES ((SELECT id FROM url WHERE url = ?1), ?2, ?3, ?4, ?5, ?6)",
+            VALUES ((SELECT id FROM url WHERE url = ?1), ?2, ?3, ?4, ?5, ?6) \
+            RETURNING id",
             (self.url, self.time, elapsed, self.status, headers, self.data)
-        )
+        ).fetchone()
         con.commit()
+        print(f"result: {res}, rows changed: {con.total_changes}")
+        print(f"inserted request with id {cur.lastrowid}")
+        if res:
+            (self.id, ) = res
+            return self.id
+        else:
+            raise Exception("failed to store request")
+
+
+    def document(self) -> Document | None:
+        if not self.data or not self.headers:
+            return None
+        return Document(self.id, self.url, self.headers, self.data)

@@ -1,10 +1,12 @@
+import time
 import click
 import sqlite3
 import requests
-import re
 
 from crawl import DEFAULT_CRAWLER_DB
 from crawl.queue import Queue
+from crawl.request import Request, Status
+from crawl.robots import can_crawl
 
 
 @click.group()
@@ -83,6 +85,68 @@ def load_urls(db, urls):
     queue = Queue(db)
     for url in urls:
         queue.push(url.strip())
+
+
+@c.command()
+@click.option(
+    '--db',
+    default=DEFAULT_CRAWLER_DB,
+    help='location of the SQLite database file',
+    type=click.Path()
+)
+def crawl_next(db):
+    queue = Queue(db)
+    url = queue.pop()
+    if not url:
+        exit(-1)
+
+    req = Request(url)
+    match req.check_status():
+        case Status.PROHIBITED | Status.TIMEOUT | Status.FAILED as s:
+            print(f"{url} previously not fetched ({s.name})")
+            exit(0)
+        case status if type(status) == Status:
+            print(f"{url} already fetched with status {status}")
+            exit(0)
+        case limited if type(limited) == float and limited > time.time():
+            print(f"{url} throttled for another {limited - time.time()}s")
+            queue.push(url)
+            exit(0)
+
+    res = can_crawl(url)
+    if type(res) == float:
+        print(f"host rate-limited for {res}s")
+        Request.rate_limited(url, res).save(db)
+        queue.push(url)
+        exit(0)
+    elif res != True:
+        Request.prohibited(url).save(db)
+        print(f"crawling prohibited for {url}")
+        exit(0)
+    print(f"fetching {url}")
+    succeeded = req.make()
+    #TODO: where to check for content-type?
+    req.save(db)
+    if not succeeded:
+        exit(0)
+    if doc := req.document():
+        doc.parse()
+        print(f"parsed document, relevance score is {doc.relevance()}")
+        if doc.check_for_duplicates():
+            # TODO: save these also? as reference to the duplicate?
+            exit(0)
+        doc.save()
+        if doc.is_relevant():
+            links = doc.links()
+            print(f"extracted {len(links)} links")
+            # TODO: implemented batched queuing
+            for link in links:
+                # TODO: check whether to queue here
+                queue.push(link)
+        else:
+            print("document is irrelevant, ignoring links")
+
+
 
 
 if __name__ == '__main__':

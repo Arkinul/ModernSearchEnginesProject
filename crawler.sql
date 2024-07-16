@@ -2,9 +2,12 @@ BEGIN TRANSACTION;
 
 CREATE TABLE IF NOT EXISTS "document" (
 	"id"	INTEGER NOT NULL PRIMARY KEY,
-	"fetched"		INTEGER	NOT NULL,
+	"request_id"	INTEGER NOT NULL,
 	"last_modified"	INTEGER,
-	"content"	TEXT
+	"simhash"	INTEGER NOT NULL,
+	"relevance"	REAL,
+	"content"	TEXT,
+	FOREIGN KEY ("request_id") REFERENCES "request"
 );
 
 -- Use "status" either as INTEGER status code or REAL timestamp
