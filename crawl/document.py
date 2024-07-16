@@ -146,7 +146,8 @@ class Document:
         con = sqlite3.connect(db)
         cur = con.cursor()
         hashes = cur.execute("SELECT id, simhash FROM document").fetchall()
-        for doc_id, simhash in hashes:
+        for doc_id, simhash_bytes in hashes:
+            simhash = int.from_bytes(simhash_bytes)
             if is_near_duplicate_simhash(self.simhash(), simhash):
                 print(f"document is near duplicate of {doc_id}")
                 return True
@@ -182,7 +183,7 @@ class Document:
             RETURNING id",
             (
                 self.request_id,
-                self.simhash(),
+                self.simhash().to_bytes(16),
                 self.relevance(),
                 self.text_content
             )
