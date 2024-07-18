@@ -99,7 +99,7 @@ class Document:
 
         stemmed_words = preprocess_text(self.text_content)  # Stem words on site
 
-        stemmed_keywords = {preprocess_text(keyword): weight for keyword, weight in
+        stemmed_keywords = {preprocess_text(keyword).pop(): weight for keyword, weight in
                             keywords.items()}  # Stem keywords as well
 
         # Count how often each word appears on a site and the number of total words

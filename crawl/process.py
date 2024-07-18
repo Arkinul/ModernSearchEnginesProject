@@ -7,6 +7,7 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 nltk.download('stopwords')
+nltk.download('wordnet')
 from url_normalize import url_normalize
 import re
 
