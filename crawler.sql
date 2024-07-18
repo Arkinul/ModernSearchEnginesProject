@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS "document" (
 	"id"	INTEGER NOT NULL PRIMARY KEY,
 	"request_id"	INTEGER NOT NULL,
 	"last_modified"	INTEGER,
-	"simhash"	BLOB NULL,
+	"simhash"	BLOB NOT NULL,
 	"relevance"	REAL,
 	"content"	TEXT,
 	FOREIGN KEY ("request_id") REFERENCES "request"
