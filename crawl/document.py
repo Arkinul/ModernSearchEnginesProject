@@ -56,6 +56,7 @@ IRRELEVANT_TAGS = [
 
 class Document:
     def __init__(self, request_id, url, headers, data: bytes):
+        self.text_content = None
         self.request_id = request_id
         self.url = url
         self.headers = headers
@@ -179,3 +180,13 @@ class Document:
             return self.id
         else:
             raise Exception("failed to store document")
+
+    def load(self, doc_id, db):
+        con = apsw.Connection(db)
+        row = con.execute("SELECT * FROM document WHERE id = ?", (doc_id,)).fetchone()[0]
+        if row:
+            self.id, self.request_id, simhash_bytes, relevance, self.text_content = row
+            self.simhash_value = int.from_bytes(simhash_bytes, byteorder='big')
+            return self
+        else:
+            raise Exception("document not found")

@@ -2,9 +2,8 @@ BEGIN TRANSACTION;
 
 CREATE TABLE IF NOT EXISTS "document" (
 	"id"	INTEGER NOT NULL PRIMARY KEY,
-	"fetched"		INTEGER	NOT NULL,
-	"last_modified"	INTEGER,
-	"content"	TEXT
+	"content"	TEXT,
+    "url" TEXT NOT NULL UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS "word" (

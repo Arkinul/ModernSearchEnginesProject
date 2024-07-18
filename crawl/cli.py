@@ -3,10 +3,11 @@ import click
 import apsw
 import requests
 
-from crawl import DEFAULT_CRAWLER_DB
+from crawl import DEFAULT_CRAWLER_DB, DEFAULT_INDEX_DB
 from crawl.queue import Queue
 from crawl.request import Request, Status
 from crawl.robots import can_crawl
+import crawl.index
 
 
 @click.group()
@@ -145,6 +146,22 @@ def crawl_next(db):
             print("document is irrelevant, ignoring links")
 
 
+@c.command()
+@click.option(
+    '--crawl_db',
+    default=DEFAULT_CRAWLER_DB,
+    help='location of the SQLite database file to be indexed',
+    type=click.Path()
+)
+@click.option(
+    '--index_db',
+    default=DEFAULT_INDEX_DB,
+    help='location of the SQLite database file to store the index',
+    type=click.Path()
+)
+def index_all(crawl_db, index_db):
+    # Index all documents in the crawl database
+    crawl.index.index_all_db(crawl_db, index_db)
 
 
 if __name__ == '__main__':
