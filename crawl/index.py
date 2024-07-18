@@ -1,14 +1,12 @@
 #Add a document to the index. You need (at least) two parameters:
 #doc: The document to be indexed.
 #index: The location of the local index storing the discovered documents.
-import sqlite3
+import apsw
 
 
 def index(doc, db=DEFAULT_INDEX_DB):
-    """
-    Add a document to the index.
-    """
-    con = sqlite3.connect(db)
+
+    con = apsw.Connection(db)
     cur = con.cursor()
 
     #preprocess text
@@ -16,7 +14,7 @@ def index(doc, db=DEFAULT_INDEX_DB):
     total_words = len(words)
 
     for word in words:
-        cur.execute(
+        con.execute(
             "INSERT INTO word (word) VALUES (?) ON CONFLICT DO NOTHING",
             word
         )

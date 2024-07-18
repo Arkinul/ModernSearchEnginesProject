@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 import nltk
 from nltk.corpus import stopwords
-from nltk.stem import PorterStemmer
+from nltk.stem import WordNetLemmatizer
 nltk.download('stopwords')
 from url_normalize import url_normalize
 import re
@@ -183,10 +183,10 @@ def should_crawl(con, url, recrawl_interval_days=30):
     return True
 
 def preprocess_text(text):
-    stemmer = PorterStemmer()
+    lemmatizer = WordNetLemmatizer()
     low = text.lower()
     words = re.findall(r'\b\w+\b', low)
-    stemmed_words = [stemmer.stem(word) for word in words]
+    stemmed_words = [lemmatizer.lemmatize(word) for word in words]
     #remove stopwords
     filtered_words = [word for word in stemmed_words if word not in stopwords.words('english')]
     return filtered_words
