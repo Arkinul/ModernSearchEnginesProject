@@ -1,5 +1,5 @@
 import os
-import sqlite3
+import apsw
 import time
 from urllib import error, request
 from urllib.parse import urlparse
@@ -18,11 +18,11 @@ HOSTS_DB_SQL = "hosts.sql"
 class Host:
     def __init__(self, origin: str, hosts_db_path="hosts.db") -> None:
         existed = os.path.exists(hosts_db_path)
-        self.con = sqlite3.connect(hosts_db_path, isolation_level = None)
+        self.con = apsw.Connection(hosts_db_path)
         if not existed:
             with open(HOSTS_DB_SQL) as file:
                 schema = file.read()
-                self.con.executescript(schema)
+                self.con.execute(schema)
         self.origin = origin
         self.load()
 
@@ -118,7 +118,7 @@ class Host:
                 (self.origin, now)
             )
             # TODO: logging
-        except sqlite3.IntegrityError:
+        except apsw.ConstraintError:
             # TODO: logging
             # constraint violated because bucket is empty
             # calculate remaining time

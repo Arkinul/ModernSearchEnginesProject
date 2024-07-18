@@ -1,6 +1,6 @@
 from collections import Counter
 import re
-import sqlite3
+import apsw
 from urllib.parse import urljoin
 
 from nltk.stem import PorterStemmer
@@ -143,10 +143,10 @@ class Document:
 
 
     def check_for_duplicates(self, db=DEFAULT_CRAWLER_DB) -> bool:
-        con = sqlite3.connect(db)
-        cur = con.cursor()
-        hashes = cur.execute("SELECT id, simhash FROM document").fetchall()
+        con = apsw.Connection(db)
+        hashes = con.execute("SELECT id, simhash FROM document").fetchall()
         for doc_id, simhash_bytes in hashes:
+            assert type(simhash_bytes) == bytes, "invalid simhash type"
             simhash = int.from_bytes(simhash_bytes)
             if is_near_duplicate_simhash(self.simhash(), simhash):
                 print(f"document is near duplicate of {doc_id}")
@@ -170,9 +170,8 @@ class Document:
         """
         if not self.request_id:
             raise Exception("cannot store document without request id")
-        con = sqlite3.connect(db)
-        cur = con.cursor()
-        res = cur.execute(
+        con = apsw.Connection(db)
+        res = con.execute(
             "INSERT INTO document ( \
                 request_id, \
                 simhash, \
@@ -188,7 +187,6 @@ class Document:
                 self.text_content
             )
         ).fetchone()
-        con.commit()
         if res:
             (self.id, ) = res
             return self.id

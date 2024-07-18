@@ -1,5 +1,5 @@
 from enum import IntEnum
-import sqlite3
+import apsw
 import time
 import requests
 
@@ -193,7 +193,7 @@ class Request:
 
 
     def check_status(self, db=DEFAULT_CRAWLER_DB) -> Status | float | None:
-        con = sqlite3.connect(db)
+        con = apsw.Connection(db)
         res = con.execute(
             "SELECT status FROM request \
             JOIN url on url_id = url.id \
@@ -247,9 +247,8 @@ class Request:
             headers = str(self.headers)
         else:
             headers = None
-        con = sqlite3.connect(db)
-        cur = con.cursor()
-        res = cur.execute(
+        con = apsw.Connection(db)
+        res = con.execute(
             "INSERT INTO request ( \
                 url_id, \
                 time, \
@@ -262,9 +261,8 @@ class Request:
             RETURNING id",
             (self.url, self.time, elapsed, self.status, headers, self.data)
         ).fetchone()
-        con.commit()
-        print(f"result: {res}, rows changed: {con.total_changes}")
-        print(f"inserted request with id {cur.lastrowid}")
+        print(f"result: {res}, rows changed: {con.changes()}")
+        print(f"inserted request with id {con.last_insert_rowid()}")
         if res:
             (self.id, ) = res
             return self.id

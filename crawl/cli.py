@@ -1,6 +1,6 @@
 import time
 import click
-import sqlite3
+import apsw
 import requests
 
 from crawl import DEFAULT_CRAWLER_DB
@@ -11,6 +11,7 @@ from crawl.robots import can_crawl
 
 @click.group()
 def c():
+    #print("SQLite version", apsw.sqlite_lib_version())
     pass
 
 
@@ -33,10 +34,8 @@ def init_db(db, sql):
     """
     # https://stackoverflow.com/a/54290631
     sql_script = sql.read()
-    db = sqlite3.connect(db)
-    cursor = db.cursor()
-    cursor.executescript(sql_script)
-    db.commit()
+    db = apsw.Connection(db)
+    db.execute(sql_script)
     db.close()
 
 
@@ -101,7 +100,7 @@ def crawl_next(db):
         exit(-1)
 
     req = Request(url)
-    match req.check_status():
+    match req.check_status(db):
         case Status.PROHIBITED | Status.TIMEOUT | Status.FAILED as s:
             print(f"{url} previously not fetched ({s.name})")
             exit(0)
@@ -135,7 +134,7 @@ def crawl_next(db):
         if doc.check_for_duplicates():
             # TODO: save these also? as reference to the duplicate?
             exit(0)
-        doc.save()
+        doc.save(db)
         if doc.is_relevant():
             links = doc.links()
             print(f"extracted {len(links)} links")

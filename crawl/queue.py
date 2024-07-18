@@ -1,31 +1,12 @@
-import sqlite3
+import apsw
 from contextlib import contextmanager
 import warnings
 
 class Index:
     def __init__(self, db):
         # https://docs.python.org/3/library/sqlite3.html#transaction-control
-        self.con = sqlite3.connect(db, isolation_level = None)
+        self.con = apsw.Connection(db)
         self.con.execute("PRAGMA foreign_keys = 1")
-
-
-    # SQLite works better in autocommit mode when using short DML (INSERT /
-    # UPDATE / DELETE) statements
-    # credit: https://github.com/litements/litequeue/blob/main/litequeue.py#L568
-    @contextmanager
-    def transaction(self, mode="DEFERRED"):
-        if mode not in {"DEFERRED", "IMMEDIATE", "EXCLUSIVE"}:
-            raise ValueError(f"Transaction mode '{mode}' is not valid")
-        # We must issue a "BEGIN" explicitly when running in auto-commit mode.
-        self.con.execute(f"BEGIN {mode}")
-        try:
-            # Yield control back to the caller.
-            yield
-        except BaseException as e:
-            self.con.rollback()  # Roll back all changes if an exception occurs.
-            raise e
-        else:
-            self.con.commit()
 
 
 class Queue(Index):
@@ -69,10 +50,9 @@ class Queue(Index):
         Does nothing if the URL is already queued.
         '''
         # TODO: normalize URL
-        with self.transaction():
-            cur = self.con.cursor()
+        with self.con:
             # check if URL is already in the URL table, also return position if already queued
-            id_and_position = cur.execute(
+            id_and_position = self.con.execute(
                 "SELECT id, frontier.position FROM url \
                 FULL OUTER JOIN frontier ON url.id = frontier.url_id \
                 WHERE url.url LIKE ?1",
@@ -86,17 +66,18 @@ class Queue(Index):
                     return
             else:
                 # insert URL into url table
-                res = cur.execute(
+                res = self.con.execute(
                     "INSERT OR IGNORE INTO url (url) \
                     VALUES (?1) \
                     RETURNING url.id",
                     (url, )
                 ).fetchone()
-                assert cur.rowcount == 1, f"failed to store URL {url} in table"
+                assert self.con.changes() == 1, f"failed to store {url} in db"
+                assert res != None
                 (url_id, ) = res
 
             # insert frontier entry at the end
-            cur.execute(
+            self.con.execute(
                 "INSERT INTO frontier (position, url_id) \
                 VALUES ( \
                     IFNULL((SELECT max(position) + 1 FROM frontier), 0), \
@@ -107,7 +88,7 @@ class Queue(Index):
 
 
     def pop(self):
-        with self.transaction():
+        with self.con:
             cur = self.con.cursor()
             pos_and_url = cur.execute(
                 "DELETE FROM frontier \
@@ -131,7 +112,7 @@ class Queue(Index):
         Insert an URL into the `url` table and add it to the frontier at the given position, without creating gaps
         '''
         # TODO: normalize URL
-        with self.transaction():
+        with self.con:
             cur = self.con.cursor()
             # check if URL is already in the URL table, also return position if already queued
             id_and_position = cur.execute(
@@ -163,7 +144,8 @@ class Queue(Index):
                     RETURNING url.id",
                     (url, )
                 ).fetchone()
-                assert cur.rowcount == 1, f"failed to store URL {url} in table"
+                assert self.con.changes() == 1, f"failed to store {url} in db"
+                assert res != None
                 (url_id, ) = res
 
             # make space for the frontier entry
