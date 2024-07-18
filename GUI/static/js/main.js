@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
             event.preventDefault();
             const query = searchBar.value.trim();
             if (query) {
-                generateWordCloud(query);
+                fetchWordCloud(query);
                 container.classList.add('moved-up');
                 fadeIn(wordCloudContainer);
             }
@@ -34,26 +34,24 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    function generateWordCloud(query) {
-        // Search result data
-        const results = [
-            { text: 'Tübingen Concerts', value: 100 },
-            { text: 'University of Tübingen', value: 80 },
-            { text: 'Hölderlin tower', value: 60 },
-            { text: 'Neckar river', value: 50 },
-            { text: 'Top 10 Restaurants in Tübingen', value: 40 },
-            { text: 'University Hospital Tübingen', value: 30 },
-            { text: 'Epplehaus', value: 20 },
-            { text: 'Castle Hohentübingen', value: 20 },
-            { text: 'Cyber Valley', value: 20 },
-            { text: 'neptune fountain', value: 35},
-            { text: 'Botanical garden', value: 20 },
-            { text: 'Neckarmüller', value: 20 },
+    // Fetch word cloud data from Flask server
+    function fetchWordCloud(query) {
+        // Makes a POST request to the /search endpoint with the query as the JSON body
+        fetch('/search', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ query: query })
+        })
+        // Parses JSON response and calls generateWordCloud() with results
+        .then(response => response.json())
+        .then(results => generateWordCloud(results))
+        .catch(error => console.error('Error fetching word cloud:', error));
+    }
 
-        ];
-
+    function generateWordCloud(results) {
         wordCloudContainer.innerHTML = '';
-
         results.forEach((word) => {
             const wordElement = document.createElement('span');
             wordElement.textContent = word.text;
