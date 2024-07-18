@@ -140,8 +140,7 @@ def crawl_next(db):
             print(f"extracted {len(links)} links")
             # TODO: implemented batched queuing
             for link in links:
-                # TODO: check whether to queue here
-                queue.push(link)
+                queue.push_if_new(link)
         else:
             print("document is irrelevant, ignoring links")
 

@@ -87,7 +87,58 @@ class Queue(Index):
             )
 
 
-    def pop(self):
+    def push_if_new(self, url):
+        '''
+        Same as `push` except that it also won't do anything if the URL has been requested previously.
+        '''
+        # TODO: normalize URL
+        with self.con:
+            # check if URL is already in the URL table, also return position if already queued and latest status if previously fetched
+            id_position_and_status = self.con.execute(
+                "WITH latest_req AS ( \
+                    SELECT id, url_id, status, MAX(time) \
+                    FROM request \
+                    GROUP BY url_id \
+                ) \
+                SELECT url.id, frontier.position, latest_req.status FROM url \
+                LEFT OUTER JOIN frontier ON url.id = frontier.url_id \
+                LEFT OUTER JOIN latest_req ON url.id = latest_req.url_id \
+                WHERE url.url LIKE ?1",
+                (url, )
+            ).fetchone()
+            if id_position_and_status:
+                #print(f"URL already stored with id {url_id}")
+                url_id, prev_pos, prev_status = id_position_and_status
+                if prev_pos is not None:
+                    #print(f"URL already queued at {prev_pos}")
+                    return
+                if prev_status:
+                    #print(f"URL previously fetched with status {prev_status}")
+                    return
+            else:
+                # insert URL into url table
+                res = self.con.execute(
+                    "INSERT OR IGNORE INTO url (url) \
+                    VALUES (?1) \
+                    RETURNING url.id",
+                    (url, )
+                ).fetchone()
+                assert self.con.changes() == 1, f"failed to store {url} in db"
+                assert res != None
+                (url_id, ) = res
+
+            # insert frontier entry at the end
+            self.con.execute(
+                "INSERT INTO frontier (position, url_id) \
+                VALUES ( \
+                    IFNULL((SELECT max(position) + 1 FROM frontier), 0), \
+                    ?1 \
+                )",
+                (url_id, )
+            )
+
+
+    def pop(self) -> str | None:
         with self.con:
             cur = self.con.cursor()
             pos_and_url = cur.execute(
