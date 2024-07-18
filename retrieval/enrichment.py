@@ -7,11 +7,6 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import spacy
 
-nltk.download('punkt')
-nltk.download('stopwords')
-nltk.download('wordnet')
-nltk.download('averaged_perceptron_tagger')
-
 # Load the spaCy NER model
 nlp = spacy.load("en_core_web_sm")
 
