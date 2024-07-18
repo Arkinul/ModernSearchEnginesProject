@@ -147,7 +147,7 @@ class Document:
         hashes = con.execute("SELECT id, simhash FROM document").fetchall()
         for doc_id, simhash_bytes in hashes:
             assert type(simhash_bytes) == bytes, "invalid simhash type"
-            simhash = int.from_bytes(simhash_bytes)
+            simhash = int.from_bytes(simhash_bytes, byteorder='big')
             if is_near_duplicate_simhash(self.simhash(), simhash):
                 print(f"document is near duplicate of {doc_id}")
                 return True
@@ -182,7 +182,7 @@ class Document:
             RETURNING id",
             (
                 self.request_id,
-                self.simhash().to_bytes(16),
+                self.simhash().to_bytes(16, byteorder='big'),
                 self.relevance(),
                 self.text_content
             )
