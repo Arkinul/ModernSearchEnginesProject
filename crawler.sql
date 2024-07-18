@@ -47,7 +47,7 @@ CREATE VIEW IF NOT EXISTS "frontier_urls" AS
 
 CREATE VIEW IF NOT EXISTS "request_urls" AS
 	SELECT
-		id,
+		request.id,
 		url.url AS 'URL',
 		time,
 		duration,
