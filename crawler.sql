@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS "request" (
 	"headers"	TEXT,
 	"data"	BLOB,
 	FOREIGN KEY("url_id") REFERENCES "url"
-) STRICT;
+)STRICT;
 
 CREATE TABLE IF NOT EXISTS "url" (
 	"id"	INTEGER	PRIMARY KEY,

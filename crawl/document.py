@@ -7,7 +7,7 @@ from nltk.stem import PorterStemmer
 from bs4 import BeautifulSoup
 
 from crawl import DEFAULT_CRAWLER_DB
-from crawl.process import compute_simhash, is_near_duplicate_simhash
+from crawl.process import compute_simhash, is_near_duplicate_simhash, preprocess_text
 
 # e.g. if 1 out of 100 words is a keyword, site is relevant
 KEYWORD_DENSITY_THRESHOLD = 0.01
@@ -64,7 +64,6 @@ class Document:
         self.simhash_value = None
         self.id = None
 
-
     def parse(self):
         self.soup = BeautifulSoup(self.data, 'html.parser')
         self.lang = self.soup.html.get('lang') if self.soup.html else None
@@ -86,7 +85,6 @@ class Document:
         chunks = (phrase.strip() for line in lines for phrase in line.split())
         self.text_content = ' '.join(chunk for chunk in chunks if chunk)
 
-
     def relevance(self) -> float:
         if self.relevance_score:
             return self.relevance_score
@@ -98,16 +96,10 @@ class Document:
             "swabian": 1.0, "schwaebisch": 1.0, "schwabisch": 1.0
         }
 
-        # Initialize stemmer, probably not needed yet for the current keyword list,
-        # but possibly in the future (transforms e.g. meeting -> meet)
-        # https://www.nltk.org/howto/stem.html
-        stemmer = PorterStemmer()
+        stemmed_words = preprocess_text(self.text_content)  # Stem words on site
 
-        content_lower = self.text_content.lower()
-        words = re.findall(r'\b\w+\b', content_lower)  # Regex to tokenize individual words on a site
-        stemmed_words = [stemmer.stem(word) for word in words]  # Stem words on site
-
-        stemmed_keywords = {stemmer.stem(keyword): weight for keyword, weight in keywords.items()}  # Stem keywords as well
+        stemmed_keywords = {preprocess_text(keyword): weight for keyword, weight in
+                            keywords.items()}  # Stem keywords as well
 
         # Count how often each word appears on a site and the number of total words
         word_counts = Counter(stemmed_words)
@@ -129,10 +121,8 @@ class Document:
         self.relevance_score = keyword_density
         return keyword_density
 
-
     def is_relevant(self) -> bool:
         return self.relevance() >= KEYWORD_DENSITY_THRESHOLD
-
 
     def simhash(self) -> int:
         if self.simhash_value:
@@ -140,7 +130,6 @@ class Document:
         texts = [self.text_content, self.title, self.meta_description]
         self.simhash_value = compute_simhash([t for t in texts if t])
         return self.simhash_value
-
 
     def check_for_duplicates(self, db=DEFAULT_CRAWLER_DB) -> bool:
         con = apsw.Connection(db)
@@ -153,7 +142,6 @@ class Document:
                 return True
         return False
 
-
     def links(self):
         # TODO remove non http/https schemes
         return [
@@ -162,7 +150,6 @@ class Document:
             in self.soup.find_all('a', href=True)
             if link.get('href')[0] != "#"
         ]
-
 
     def save(self, db=DEFAULT_CRAWLER_DB):
         """
@@ -188,9 +175,7 @@ class Document:
             )
         ).fetchone()
         if res:
-            (self.id, ) = res
+            (self.id,) = res
             return self.id
         else:
             raise Exception("failed to store document")
-
-

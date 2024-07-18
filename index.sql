@@ -8,13 +8,15 @@ CREATE TABLE IF NOT EXISTS "document" (
 );
 
 CREATE TABLE IF NOT EXISTS "word" (
-    "id"    INTEGER NOT NULL PRIMARY KEY,
+    "id"    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
     "word"  TEXT NOT NULL UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS "invertedIndex" (
     "word_id" INTEGER NOT NULL,
     "document_id" INTEGER NOT NULL,
+    "frequency" INTEGER NOT NULL,
+    "position" INTEGER NOT NULL,
     PRIMARY KEY("word_id", "document_id"),
     FOREIGN KEY("word_id") REFERENCES "word",
     FOREIGN KEY("document_id") REFERENCES "document"
