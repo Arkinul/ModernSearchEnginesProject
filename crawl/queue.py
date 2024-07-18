@@ -21,6 +21,14 @@ class Queue(Index):
             raise StopIteration
 
 
+    def __len__(self) -> int:
+        res = self.con.execute("SELECT COUNT() FROM frontier").fetchone()
+        assert res != None, "failed to determine frontier size"
+        (count, ) = res
+        assert type(count) == int, ("failed to determine frontier size")
+        return count
+
+
     def shift(self, cur, position, amount = 1):
         '''
         Move all rows in the frontier >= `position` back by `amount`
