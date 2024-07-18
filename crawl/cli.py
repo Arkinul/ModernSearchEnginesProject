@@ -1,6 +1,7 @@
 import time
 import click
 import apsw
+import nltk
 import requests
 
 from crawl import DEFAULT_CRAWLER_DB, DEFAULT_INDEX_DB
@@ -38,6 +39,29 @@ def init_db(db, sql):
     db = apsw.Connection(db)
     db.execute(sql_script)
     db.close()
+
+
+@c.command()
+@click.option(
+    '--path',
+    default=None,
+    help='where to store the NLTK corpora',
+    type=click.Path()
+)
+def download_corpora(path):
+    """
+    Run `nltk.download()` for all the required corpora.
+    The `path` argument needs to be one of the directories that NLTK checks when looking for the downloaded corpora.
+    """
+    NLTK_CORPORA = [
+        'punkt',
+        'stopwords',
+        'wordnet',
+        'averaged_perceptron_tagger'
+    ]
+
+    for corpus in NLTK_CORPORA:
+        nltk.download(corpus, download_dir=path)
 
 
 @c.command()
