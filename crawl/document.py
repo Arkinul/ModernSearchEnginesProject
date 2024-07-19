@@ -7,7 +7,7 @@ from nltk.stem import PorterStemmer
 from bs4 import BeautifulSoup
 
 from crawl import DEFAULT_CRAWLER_DB
-from crawl.process import compute_simhash, is_near_duplicate_simhash, preprocess_text
+from crawl.process import compute_simhash, is_near_duplicate_simhash, normalize_url, preprocess_text
 
 # e.g. if 1 out of 100 words is a keyword, site is relevant
 KEYWORD_DENSITY_THRESHOLD = 0.01
@@ -144,13 +144,13 @@ class Document:
         return False
 
     def links(self):
-        # TODO remove non http/https schemes
-        return [
-            urljoin(self.url, link.get('href'))
-            for link
-            in self.soup.find_all('a', href=True)
-            if link.get('href')[0] != "#"
-        ]
+        for link_tag in self.soup.find_all('a', href=True):
+            if link := link_tag.get('href'):
+                if link[0] != "#": continue
+                absolute = urljoin(self.url, link)
+                if not absolute.startswith("http"): continue
+                yield normalize_url(absolute)
+
 
     def save(self, db=DEFAULT_CRAWLER_DB):
         """
