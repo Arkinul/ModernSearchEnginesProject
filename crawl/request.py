@@ -192,6 +192,25 @@ class Request:
         return req
 
 
+    @staticmethod
+    def stats(db=DEFAULT_CRAWLER_DB):
+        con = apsw.Connection(db)
+        res = con.execute(
+            "SELECT \
+                (SELECT AVG(duration) FROM request), \
+                (SELECT COUNT() / 30.0 FROM request WHERE time > ?1), \
+                (SELECT COUNT() FROM request WHERE status BETWEEN 200 AND 300), \
+                (SELECT COUNT() FROM request WHERE status = 10), \
+                (SELECT COUNT() FROM request WHERE status = 11), \
+                (SELECT COUNT() FROM request WHERE status = 20) \
+            ",
+            (time.time() - 30, )
+        ).fetchone()
+        assert res != None
+        (avg, rate, ok, failed, timed_out, prohibited) = res
+        return (avg, rate, ok, failed, timed_out, prohibited)
+
+
     def check_status(self, db=DEFAULT_CRAWLER_DB) -> Status | float | None:
         con = apsw.Connection(db)
         res = con.execute(
