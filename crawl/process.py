@@ -1,4 +1,5 @@
 import hashlib
+import math
 from collections import Counter
 from datetime import datetime, timedelta
 
@@ -8,6 +9,10 @@ from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from url_normalize import url_normalize
 import re
+import apsw
+
+from crawl import DEFAULT_INDEX_DB
+
 
 def html_cleaner(response, url):
     soup = BeautifulSoup(response.content, 'html.parser')
@@ -18,10 +23,10 @@ def html_cleaner(response, url):
         meta_description = soup.find("meta", attrs={"name": "description"}).get("content", "")
     links = [link.get('href') for link in soup.find_all('a', href=True)]
     irrelevant_tags = [
-        "script", "style", "link", "meta", "header", "nav", "aside", "footer", "form", 
+        "script", "style", "link", "meta", "header", "nav", "aside", "footer", "form",
         "iframe", "template", "button", "input", "select", "textarea", "label",
         "img", "picture", "svg", "canvas", "audio", "video", "object",
-        "param", "source", "track", "noscript", "map", "area", "figure", "figcaption", 
+        "param", "source", "track", "noscript", "map", "area", "figure", "figcaption",
         "details", "summary", "dialog", "menu", "menuitem", "applet", "embed"
     ]
 
@@ -31,7 +36,7 @@ def html_cleaner(response, url):
     lines = (line.strip() for line in text.splitlines())
     chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
     text_content = ' '.join(chunk for chunk in chunks if chunk)
-    
+
     combined_text = ' '.join([title, meta_description, text_content])
     if is_relevant(combined_text):
         #TODO:instead of dictonary put it into the database
@@ -45,6 +50,7 @@ def html_cleaner(response, url):
         }
         return page_data
 
+
 def is_relevant(content):
     keywords = {
         "tübingen": 1.0, "hölderlin": 1.0, "hohenzollern": 1.0,
@@ -53,16 +59,10 @@ def is_relevant(content):
         "swabian": 1.0, "schwaebisch": 1.0, "schwabisch": 1.0
     }
 
-    # Initialize stemmer, probably not needed yet for the current keyword list,
-    # but possibly in the future (transforms e.g. meeting -> meet)
-    # https://www.nltk.org/howto/stem.html
-    stemmer = PorterStemmer()
+    stemmed_words = preprocess_text(content)  # Stem words on site
 
-    content_lower = content.lower()
-    words = re.findall(r'\b\w+\b', content_lower)  # Regex to tokenize individual words on a site
-    stemmed_words = [stemmer.stem(word) for word in words]  # Stem words on site
-
-    stemmed_keywords = {stemmer.stem(keyword): weight for keyword, weight in keywords.items()}  # Stem keywords as well
+    stemmed_keywords = {preprocess_text(keyword).pop(): weight for keyword, weight in
+                        keywords.items()}  # Stem keywords as well
 
     # Count how often each word appears on a site and the number of total words
     word_counts = Counter(stemmed_words)
@@ -89,11 +89,14 @@ def is_relevant(content):
 
     return is_relevant_content
 
+
 def shingle(text, k=5):
-    return set(text[i:i+k] for i in range(len(text) - k + 1))
+    return set(text[i:i + k] for i in range(len(text) - k + 1))
+
 
 def hash_shingle(shingle):
     return int(hashlib.md5(shingle.encode('utf-8')).hexdigest(), 16)
+
 
 def compute_simhash(texts, k=5):
     shingles = set()
@@ -114,12 +117,15 @@ def compute_simhash(texts, k=5):
             fingerprint |= 1 << i
     return fingerprint
 
+
 def hamming_distance(x, y):
     return (x ^ y).bit_count()
+
 
 #TODO:set appropiate treshold (might need some more testing)
 def is_near_duplicate_simhash(simhash1, simhash2, threshold=15):
     return hamming_distance(simhash1, simhash2) <= threshold
+
 
 def check_duplicate(page_data):
     #TODO:fetch existing simhases from database. Do we compare a new simhash with every other existing simhash from the database or can we optimize?
@@ -129,7 +135,7 @@ def check_duplicate(page_data):
     for existing_simhash in existing_simhashes:
         if is_near_duplicate_simhash(simhash, existing_simhash):
             return False
-        
+
     #TODO:insert page with new simhash into database
     existing_simhashes.append(simhash)
     return True
@@ -147,7 +153,8 @@ def normalize_url(url):
     '''
     return url_normalize(url)
 
-#WARNING: Hasn't been tested yet 
+
+#WARNING: Hasn't been tested yet
 def should_crawl(con, url, recrawl_interval_days=30):
     '''
     Determines if the given URL should be crawled based on whether it has been previously crawled
@@ -162,9 +169,11 @@ def should_crawl(con, url, recrawl_interval_days=30):
     bool: True if the URL should be crawled, False otherwise.
     '''
     cur = con.cursor()
-    cur.execute("SELECT document_id, (SELECT last_modified FROM document WHERE id = document_id) FROM url WHERE url = ?", (url,))
+    cur.execute(
+        "SELECT document_id, (SELECT last_modified FROM document WHERE id = document_id) FROM url WHERE url = ?",
+        (url,))
     result = cur.fetchone()
-    
+
     if result:
         document_id, last_modified = result
         if document_id:
@@ -181,6 +190,7 @@ def should_crawl(con, url, recrawl_interval_days=30):
             return False
     return True
 
+
 def preprocess_text(text):
     lemmatizer = WordNetLemmatizer()
     low = text.lower()
@@ -191,3 +201,54 @@ def preprocess_text(text):
     return filtered_words
 
 
+def total_doc_count():
+    con = apsw.Connection(DEFAULT_INDEX_DB)
+    count = con.execute("SELECT COUNT(DISTINCT document_id) FROM inverted_index").fetchone()[0]
+    return count
+
+
+def IDF(word):
+    con = apsw.Connection(DEFAULT_INDEX_DB)
+    dfcount = con.execute(
+        "SELECT COUNT(DISTINCT document_id) FROM inverted_index WHERE word_id = (SELECT id FROM word WHERE word = ?)",
+        (word,)).fetchone()[0]
+    if dfcount == 0:
+        return math.inf
+    else:
+        return math.log(total_doc_count() / dfcount)
+
+
+def TF(word, document_id):
+    con = apsw.Connection(DEFAULT_INDEX_DB)
+    tfcount = con.execute(
+        "SELECT frequency FROM inverted_index WHERE word_id = (SELECT id FROM word WHERE word = ?) AND document_id = ?",
+        (word, document_id)).fetchone()
+    if tfcount:
+        return tfcount[0]
+    else:
+        return 0
+
+
+def doc_length(document_id):
+    con = apsw.Connection(DEFAULT_INDEX_DB)
+    length = con.execute(
+        "SELECT COUNT(*) FROM inverted_index WHERE document_id = ?",
+        (document_id,)).fetchone()[0]
+    return length
+
+
+def BM25(query, document_id, k=1.5, b=0.75):
+    score = 0
+    for word in query:
+        idf = IDF(word)
+        tf = TF(word, document_id)
+        score += idf * ((tf * (k + 1)) / (tf + k * (1 - b + b * (doc_length(document_id) / total_doc_count()))))
+    return score
+
+
+def potential_docs(query):
+    con = apsw.Connection(DEFAULT_INDEX_DB)
+    doclist = con.execute(
+        "SELECT DISTINCT document_id FROM inverted_index WHERE word_id = (SELECT id FROM word WHERE word = ?)",
+        (query,)).fetchall()
+    return doclist
