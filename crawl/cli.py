@@ -5,6 +5,7 @@ import nltk
 import requests
 
 from crawl import DEFAULT_CRAWLER_DB, DEFAULT_INDEX_DB
+from crawl.loop import crawler_loop
 from crawl.queue import Queue
 from crawl.request import Request, Status
 from crawl.robots import can_crawl
@@ -169,6 +170,16 @@ def crawl_next(db):
         else:
             print("document is irrelevant, ignoring links")
 
+
+@c.command()
+@click.option(
+    '--db',
+    default=DEFAULT_CRAWLER_DB,
+    help='location of the SQLite database file',
+    type=click.Path()
+)
+def crawl(db):
+    crawler_loop(db)
 
 @c.command()
 @click.option(
