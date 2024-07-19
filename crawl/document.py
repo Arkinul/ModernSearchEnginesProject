@@ -65,26 +65,33 @@ class Document:
         self.simhash_value = None
         self.id = None
 
-    def parse(self):
-        self.soup = BeautifulSoup(self.data, 'html.parser')
-        self.lang = self.soup.html.get('lang') if self.soup.html else None
-        self.title = self.soup.title.string if self.soup.title else None
-        meta_description = self.soup.find(
-            "meta",
-            attrs={"name": "description"}
-        )
-        if meta_description:
-            self.meta_description = meta_description.get("content")
+    def parse(self) -> bool:
+        try:
+            self.soup = BeautifulSoup(self.data, 'html.parser')
+            self.lang = self.soup.html.get('lang') if self.soup.html else None
+            self.title = self.soup.title.string if self.soup.title else None
+            meta_description = self.soup.find(
+                "meta",
+                attrs={"name": "description"}
+            )
+            if meta_description:
+                self.meta_description = meta_description.get("content")
+            else:
+                self.meta_description = None
+
+            for tag in self.soup(IRRELEVANT_TAGS):
+                tag.extract()
+
+            text = self.soup.get_text(separator=' ')
+            lines = (line.strip() for line in text.splitlines())
+            chunks = (phrase.strip() for line in lines for phrase in line.split())
+            self.text_content = ' '.join(chunk for chunk in chunks if chunk)
+        except Exception as e:
+            print(f"failed to parse {self.url}: {e}")
+            return False
         else:
-            self.meta_description = None
+            return True
 
-        for tag in self.soup(IRRELEVANT_TAGS):
-            tag.extract()
-
-        text = self.soup.get_text(separator=' ')
-        lines = (line.strip() for line in text.splitlines())
-        chunks = (phrase.strip() for line in lines for phrase in line.split())
-        self.text_content = ' '.join(chunk for chunk in chunks if chunk)
 
     def relevance(self) -> float:
         if self.relevance_score:
