@@ -1,6 +1,7 @@
 import os
 import apsw
 import time
+from http.client import RemoteDisconnected
 from urllib import error, request
 from urllib.parse import urlparse
 from urllib.robotparser import RobotFileParser
@@ -33,8 +34,12 @@ class Host:
         try:
             self.rfp = RobotFileParser()
             f = request.urlopen(self.origin + "/robots.txt")
+            raw = f.read()
+            self.rfp.parse(raw.decode("utf-8").splitlines())
         except error.HTTPError as err:
             if err.code in (401, 403):
+                self.global_policy = False
+            if err.code in range(300, 400):
                 self.global_policy = False
             elif err.code >= 400 and err.code < 500:
                 self.global_policy = True
@@ -47,11 +52,18 @@ class Host:
             self.refill_rate = DEFAULT_REFILL_RATE
             self.tokens = DEFAULT_REFILL_CAP
             robots_txt = None
+        except (error.URLError, UnicodeDecodeError, RemoteDisconnected):
+            #TODO: log
+            # ignore hosts that have robots.txt with invalid unicode
+            # ignore hosts that we can't fetch robots.txt from
+            self.global_policy = False
+            self.refill_cap = DEFAULT_REFILL_CAP
+            self.refill_rate = DEFAULT_REFILL_RATE
+            self.tokens = DEFAULT_REFILL_CAP
+            robots_txt = None
         else:
-            raw = f.read()
-            self.rfp.parse(raw.decode("utf-8").splitlines())
             # TODO: log this instead of printing
-            print(f"fetched robots.txt for {self.origin}")
+            #print(f"fetched robots.txt for {self.origin}")
 
             # No global allow/disallow policy, store the robots.txt content
             # don't store the raw file, re-serialize the parsed RFP
