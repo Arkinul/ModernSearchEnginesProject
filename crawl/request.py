@@ -261,8 +261,8 @@ class Request:
             RETURNING id",
             (self.url, self.time, elapsed, self.status, headers, self.data)
         ).fetchone()
-        print(f"result: {res}, rows changed: {con.changes()}")
-        print(f"inserted request with id {con.last_insert_rowid()}")
+        #print(f"result: {res}, rows changed: {con.changes()}")
+        #print(f"inserted request with id {con.last_insert_rowid()}")
         if res:
             (self.id, ) = res
             return self.id
