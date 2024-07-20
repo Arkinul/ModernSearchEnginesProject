@@ -1,4 +1,5 @@
 from collections import Counter
+import json
 import re
 import apsw
 from urllib.parse import urljoin
@@ -230,3 +231,23 @@ class Document:
             return doc
         else:
             raise Exception("document not found")
+
+
+    @staticmethod
+    def load_request(request_id, db):
+        con = apsw.Connection(db)
+        row = con.execute(
+            "SELECT url.url, JSON(headers), data \
+            FROM request \
+            JOIN url ON url_id = url.id \
+            WHERE request.id = ?1",
+            (request_id, )
+        ).fetchone()
+        if row:
+            url, headers_json, data = row
+            if not headers_json:
+                return None
+            headers = json.loads(headers_json)
+            doc = Document(request_id, url, headers, data)
+            return doc
+        return None
