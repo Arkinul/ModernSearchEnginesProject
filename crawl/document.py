@@ -2,7 +2,7 @@ from collections import Counter
 import json
 import re
 import apsw
-from urllib.parse import urljoin
+from urllib.parse import urldefrag, urljoin
 
 from nltk.stem import PorterStemmer
 from bs4 import BeautifulSoup
@@ -201,8 +201,8 @@ class Document:
     def links(self):
         for link_tag in self.soup.find_all('a', href=True):
             if link := link_tag.get('href'):
-                if link[0] != "#": continue
-                absolute = urljoin(self.url, link)
+                if link[0] == "#": continue
+                absolute = urljoin(urldefrag(self.url), link)
                 if not absolute.startswith("http"): continue
                 yield normalize_url(absolute)
 
