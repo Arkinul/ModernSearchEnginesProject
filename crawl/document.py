@@ -1,10 +1,8 @@
 from collections import Counter
 import json
-import re
-import apsw
 from urllib.parse import urldefrag, urljoin
 
-from nltk.stem import PorterStemmer
+import apsw
 from bs4 import BeautifulSoup
 
 from crawl import DEFAULT_CRAWLER_DB
