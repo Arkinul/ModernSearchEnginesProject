@@ -207,12 +207,26 @@ class Document:
         else:
             raise Exception("failed to store document")
 
-    def load(self, doc_id, db):
+
+    @staticmethod
+    def load(doc_id, db):
+        doc = Document(None, None, None, None)
         con = apsw.Connection(db)
-        row = con.execute("SELECT * FROM document WHERE id = ?", (doc_id,)).fetchone()[0]
+        row = con.execute(
+            "SELECT id, request_id, simhash, relevance, content \
+            FROM document \
+            WHERE id = ?1",
+            (doc_id, )
+        ).fetchone()
         if row:
-            self.id, self.request_id, simhash_bytes, relevance, self.text_content = row
-            self.simhash_value = int.from_bytes(simhash_bytes, byteorder='big')
-            return self
+            (
+                doc.id,
+                doc.request_id,
+                simhash_bytes,
+                doc.relevance_score,
+                doc.text_content
+            ) = row
+            doc.simhash_value = int.from_bytes(simhash_bytes, byteorder='big')
+            return doc
         else:
             raise Exception("document not found")

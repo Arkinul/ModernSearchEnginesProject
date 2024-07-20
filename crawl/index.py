@@ -15,7 +15,7 @@ def index_all_db(crawl_db=DEFAULT_CRAWLER_DB, index_db=DEFAULT_INDEX_DB):
         "SELECT MAX(id) FROM document"
     ).fetchone()[0]
     for doc_id in range(1, max_doc_id + 1):
-        doc = Document.load(doc_id, db)
+        doc = Document.load(doc_id, db=crawl_db)
         index(doc, index_db)
 
 
