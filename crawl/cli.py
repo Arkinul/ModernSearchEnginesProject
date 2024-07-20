@@ -171,14 +171,17 @@ def crawl_next(db):
             print("document is irrelevant, ignoring links")
 
 
-@c.command()
+@c.command(name="crawl")
 @click.option(
     '--db',
     default=DEFAULT_CRAWLER_DB,
     help='location of the SQLite database file',
     type=click.Path()
 )
-def crawl(db):
+def crawl_loop(db):
+    """
+    Run the crawler loop
+    """
     crawler_loop(db)
 
 @c.command()
