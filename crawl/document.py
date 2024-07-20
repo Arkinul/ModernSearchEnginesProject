@@ -94,7 +94,15 @@ class Document:
     def parse(self) -> bool:
         try:
             self.soup = BeautifulSoup(self.data, 'html.parser')
-            self.lang = self.soup.html.get('lang') if self.soup.html else None
+            if self.soup.html and (lang_tag := self.soup.html.get('lang')):
+                if type(lang_tag) == str:
+                    self.lang = lang_tag
+                elif lang_tag:
+                    self.lang = lang_tag[0]
+                else:
+                    self.lang = None
+            else: self.lang = None
+
             self.title = self.soup.title.string if self.soup.title else None
             meta_description = self.soup.find(
                 "meta",
