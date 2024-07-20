@@ -1,5 +1,6 @@
 from collections import Counter
 import json
+import re
 from urllib.parse import urldefrag, urljoin
 
 import apsw
@@ -202,7 +203,10 @@ class Document:
                 if link[0] == "#": continue
                 absolute = urljoin(self.url, urldefrag(link).url)
                 if not absolute.startswith("http"): continue
-                yield normalize_url(absolute)
+                norm = normalize_url(absolute)
+                is_wiki = re.compile("^https?://([a-z]{2})[.]wikipedia[.]org/")
+                if (m := is_wiki.match(norm)) and m.group(1) != 'en': continue
+                yield norm
 
 
     def save(self, db=DEFAULT_CRAWLER_DB):
