@@ -1,3 +1,4 @@
+import os
 import time
 import click
 import apsw
@@ -197,8 +198,24 @@ def crawl_loop(db):
     help='location of the SQLite database file to store the index',
     type=click.Path()
 )
-def index_all(crawl_db, index_db):
-    # Index all documents in the crawl database
+@click.option(
+    '--index_sql',
+    default='index.sql',
+    help='SQL to initialize index database tables',
+    type=click.File()
+)
+def index_all(crawl_db, index_db, index_sql):
+    """
+    Index all documents in the crawl database.
+
+    Automatically creates index database file if it does not exist.
+    """
+    if not os.path.exists(index_db):
+        # https://stackoverflow.com/a/54290631
+        sql_script = index_sql.read()
+        db = apsw.Connection(index_db)
+        db.execute(sql_script)
+        db.close()
     crawl.index.index_all_db(crawl_db, index_db)
 
 
