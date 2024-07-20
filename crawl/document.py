@@ -212,6 +212,7 @@ class Document:
                 request_id, \
                 simhash, \
                 relevance, \
+                language, \
                 content \
             ) \
             VALUES (?1, ?2, ?3, ?4) \
@@ -220,6 +221,7 @@ class Document:
                 self.request_id,
                 self.simhash().to_bytes(16, byteorder='big'),
                 self.relevance(),
+                self.lang,
                 self.text_content
             )
         ).fetchone()

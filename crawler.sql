@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS "document" (
 	"last_modified"	INTEGER,
 	"simhash"	BLOB NOT NULL,
 	"relevance"	REAL,
+	"language"	TEXT,
 	"content"	TEXT,
 	FOREIGN KEY ("request_id") REFERENCES "request"
 );
