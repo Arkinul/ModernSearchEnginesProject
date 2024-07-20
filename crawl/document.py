@@ -144,6 +144,10 @@ class Document:
         if self.relevance_score:
             return self.relevance_score
 
+        if not self.is_english():
+            self.relevance_score = 0.0
+            return self.relevance_score
+
         stemmed_words = preprocess_text(self.text_content)  # Stem words on site
 
         # Count how often each word appears on a site and the number of total words
