@@ -27,7 +27,8 @@ KEYWORD_WEIGHTS = {
     "tuebinger": 1.0,
     "swabian": 1.0,
     "schwaebisch": 1.0,
-    "schwabisch": 1.0
+    "schwabisch": 1.0,
+    "t%C3%BCbingen": 1.0
 }
 
 # Stem keywords as well
