@@ -148,6 +148,13 @@ class Document:
             self.relevance_score = 0.0
             return self.relevance_score
 
+        # assume documents from URLs containing keywords are relevant
+        url_words = preprocess_text(self.url)
+        for word, weight in STEMMED_KEYWORDS.items():
+            if word in url_words and weight > 0.5:
+                self.relevance_score = 1.0
+                return self.relevance_score
+
         stemmed_words = preprocess_text(self.text_content)  # Stem words on site
 
         # Count how often each word appears on a site and the number of total words
