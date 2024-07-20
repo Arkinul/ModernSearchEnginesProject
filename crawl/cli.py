@@ -59,7 +59,9 @@ def download_corpora(path):
         'punkt',
         'stopwords',
         'wordnet',
-        'averaged_perceptron_tagger'
+        'averaged_perceptron_tagger',
+        'maxent_ne_chunker',
+        'words'
     ]
 
     for corpus in NLTK_CORPORA:
