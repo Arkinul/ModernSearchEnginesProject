@@ -240,9 +240,14 @@ class Document:
 
 
     @staticmethod
-    def load(doc_id, db):
+    def load(doc_id, db: apsw.Connection | str):
         doc = Document(None, None, None, None)
-        con = apsw.Connection(db)
+        if type(db) == str:
+            con = apsw.Connection(db)
+        elif type(db) == apsw.Connection:
+            con = db
+        else:
+            raise Exception("invalid db argument")
         row = con.execute(
             "SELECT \
                 document.id, \
