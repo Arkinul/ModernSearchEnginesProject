@@ -244,14 +244,23 @@ class Document:
         doc = Document(None, None, None, None)
         con = apsw.Connection(db)
         row = con.execute(
-            "SELECT id, request_id, simhash, relevance, content \
+            "SELECT \
+                document.id, \
+                url.url, \
+                request_id, \
+                simhash, \
+                relevance, \
+                content \
             FROM document \
-            WHERE id = ?1",
+            JOIN request ON request_id = request.id \
+            JOIN url ON request.url_id = url.id \
+            WHERE document.id = ?1",
             (doc_id, )
         ).fetchone()
         if row:
             (
                 doc.id,
+                doc.url,
                 doc.request_id,
                 simhash_bytes,
                 doc.relevance_score,
