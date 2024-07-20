@@ -12,6 +12,24 @@ from crawl.process import compute_simhash, is_near_duplicate_simhash, normalize_
 # e.g. if 1 out of 100 words is a keyword, site is relevant
 KEYWORD_DENSITY_THRESHOLD = 0.01
 
+
+KEYWORD_WEIGHTS = {
+    "tübingen": 1.0,
+    "hölderlin": 1.0,
+    "hohenzollern": 1.0,
+    "neckar": 1.0,
+    "schwaben": 1.0,
+    "schwäbisch": 1.0,
+    "tübinger": 1.0,
+    "bebenhausen": 1.0,
+    "tubingen": 1.0,
+    "tuebingen": 1.0,
+    "tuebinger": 1.0,
+    "swabian": 1.0,
+    "schwaebisch": 1.0,
+    "schwabisch": 1.0
+}
+
 IRRELEVANT_TAGS = [
     "script",
     "style",
@@ -84,7 +102,11 @@ class Document:
 
             text = self.soup.get_text(separator=' ')
             lines = (line.strip() for line in text.splitlines())
-            chunks = (phrase.strip() for line in lines for phrase in line.split())
+            chunks = (
+                phrase.strip()
+                for line in lines
+                for phrase in line.split()
+            )
             self.text_content = ' '.join(chunk for chunk in chunks if chunk)
         except Exception as e:
             print(f"failed to parse {self.url}: {e}")
@@ -97,17 +119,14 @@ class Document:
         if self.relevance_score:
             return self.relevance_score
 
-        keywords = {
-            "tübingen": 1.0, "hölderlin": 1.0, "hohenzollern": 1.0,
-            "neckar": 1.0, "schwaben": 1.0, "schwäbisch": 1.0, "tübinger": 1.0,
-            "bebenhausen": 1.0, "tubingen": 1.0, "tuebingen": 1.0, "tuebinger": 1.0,
-            "swabian": 1.0, "schwaebisch": 1.0, "schwabisch": 1.0
-        }
-
         stemmed_words = preprocess_text(self.text_content)  # Stem words on site
 
-        stemmed_keywords = {preprocess_text(keyword).pop(): weight for keyword, weight in
-                            keywords.items()}  # Stem keywords as well
+        # Stem keywords as well
+        stemmed_keywords = {
+            preprocess_text(keyword).pop(): weight
+            for keyword, weight
+            in KEYWORD_WEIGHTS.items()
+        }
 
         # Count how often each word appears on a site and the number of total words
         word_counts = Counter(stemmed_words)

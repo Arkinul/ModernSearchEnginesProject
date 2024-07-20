@@ -197,7 +197,11 @@ def preprocess_text(text):
     words = re.findall(r'\b\w+\b', low)
     stemmed_words = [lemmatizer.lemmatize(word) for word in words]
     #remove stopwords
-    filtered_words = [word for word in stemmed_words if word not in stopwords.words('english')]
+    filtered_words = [
+        word
+        for word in stemmed_words
+        if word not in stopwords.words('english')
+    ]
     return filtered_words
 
 
