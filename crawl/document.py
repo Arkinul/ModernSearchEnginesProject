@@ -225,7 +225,7 @@ class Document:
                 language, \
                 content \
             ) \
-            VALUES (?1, ?2, ?3, ?4) \
+            VALUES (?1, ?2, ?3, ?4, ?5) \
             RETURNING id",
             (
                 self.request_id,
