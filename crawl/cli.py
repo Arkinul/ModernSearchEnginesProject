@@ -158,16 +158,16 @@ def crawl_next(db):
     if doc := req.document():
         doc.parse()
         print(f"parsed document, relevance score is {doc.relevance()}")
-        if doc.check_for_duplicates():
+        if doc.check_for_duplicates(db):
             # TODO: save these also? as reference to the duplicate?
             exit(0)
         doc.save(db)
         if doc.is_relevant():
-            links = doc.links()
-            print(f"extracted {len(links)} links")
-            # TODO: implemented batched queuing
-            for link in links:
+            link_count = 0
+            for link in doc.links():
                 queue.push_if_new(link)
+                link_count += 1
+            print(f"extracted {link_count} links")
         else:
             print("document is irrelevant, ignoring links")
 
