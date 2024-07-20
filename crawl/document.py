@@ -31,6 +31,13 @@ KEYWORD_WEIGHTS = {
     "schwabisch": 1.0
 }
 
+# Stem keywords as well
+STEMMED_KEYWORDS = {
+    preprocess_text(keyword).pop(): weight
+    for keyword, weight
+    in KEYWORD_WEIGHTS.items()
+}
+
 IRRELEVANT_TAGS = [
     "script",
     "style",
@@ -131,20 +138,13 @@ class Document:
 
         stemmed_words = preprocess_text(self.text_content)  # Stem words on site
 
-        # Stem keywords as well
-        stemmed_keywords = {
-            preprocess_text(keyword).pop(): weight
-            for keyword, weight
-            in KEYWORD_WEIGHTS.items()
-        }
-
         # Count how often each word appears on a site and the number of total words
         word_counts = Counter(stemmed_words)
         total_words = len(stemmed_words)
 
         # Count the number of relevant words on a site
         relevant_count = 0
-        for word, weight in stemmed_keywords.items():
+        for word, weight in STEMMED_KEYWORDS.items():
             if word in word_counts:
                 relevant_count += word_counts[word] * weight
 
