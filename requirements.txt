@@ -5,3 +5,4 @@ url-normalize
 nltk
 apsw
 flask
+tqdm

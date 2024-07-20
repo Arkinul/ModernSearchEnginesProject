@@ -4,6 +4,8 @@
 import apsw
 from collections import Counter
 
+from tqdm import tqdm
+
 from crawl import DEFAULT_CRAWLER_DB, DEFAULT_INDEX_DB
 from crawl.document import Document
 from crawl.process import preprocess_text
@@ -16,7 +18,7 @@ def index_all_db(crawl_db=DEFAULT_CRAWLER_DB, index_db=DEFAULT_INDEX_DB):
     max_doc_id = crawl_con.execute(
         "SELECT MAX(id) FROM document"
     ).fetchone()[0]
-    for doc_id in range(1, max_doc_id + 1):
+    for doc_id in tqdm(range(1, max_doc_id + 1)):
         doc = Document.load(doc_id, db=crawl_con)
         index(doc, index_con)
 
