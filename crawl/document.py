@@ -116,6 +116,15 @@ class Document:
             return True
 
 
+    def is_english(self) -> bool:
+        if type(self.lang) == str and self.lang.lower().startswith("en"):
+            return True
+        if type(self.headers) == dict:
+            if lang := self.headers.get("Content-Language"):
+                return lang.lower().startswith("en")
+        return False
+
+
     def relevance(self) -> float:
         if self.relevance_score:
             return self.relevance_score
