@@ -244,6 +244,7 @@ class Document:
                 simhash, \
                 relevance, \
                 language, \
+                title, \
                 content \
             ) \
             VALUES (?1, ?2, ?3, ?4, ?5) \
@@ -253,6 +254,7 @@ class Document:
                 self.simhash().to_bytes(16, byteorder='big'),
                 self.relevance(),
                 self.lang,
+                self.title,
                 self.text_content
             )
         ).fetchone()
@@ -263,7 +265,6 @@ class Document:
             raise Exception("failed to store document")
 
 
-    # TODO load language as well
     @staticmethod
     def load(doc_id, db: apsw.Connection | str):
         doc = Document(None, None, None, None)
@@ -280,6 +281,8 @@ class Document:
                 request_id, \
                 simhash, \
                 relevance, \
+                language, \
+                title, \
                 content \
             FROM document \
             JOIN request ON request_id = request.id \
@@ -294,6 +297,8 @@ class Document:
                 doc.request_id,
                 simhash_bytes,
                 doc.relevance_score,
+                doc.lang,
+                doc.title,
                 doc.text_content
             ) = row
             doc.simhash_value = int.from_bytes(simhash_bytes, byteorder='big')
@@ -311,6 +316,8 @@ class Document:
                 request_id, \
                 simhash, \
                 relevance, \
+                language, \
+                title, \
                 content \
             FROM document \
             JOIN request ON request_id = request.id \
@@ -324,6 +331,8 @@ class Document:
                 doc.request_id,
                 simhash_bytes,
                 doc.relevance_score,
+                doc.lang,
+                doc.title,
                 doc.text_content
             ) = row
             assert type(simhash_bytes) == bytes
