@@ -1,3 +1,4 @@
+import os
 import time
 import click
 import apsw
@@ -58,7 +59,9 @@ def download_corpora(path):
         'punkt',
         'stopwords',
         'wordnet',
-        'averaged_perceptron_tagger'
+        'averaged_perceptron_tagger',
+        'maxent_ne_chunker',
+        'words'
     ]
 
     for corpus in NLTK_CORPORA:
@@ -157,28 +160,31 @@ def crawl_next(db):
     if doc := req.document():
         doc.parse()
         print(f"parsed document, relevance score is {doc.relevance()}")
-        if doc.check_for_duplicates():
+        if doc.check_for_duplicates(db):
             # TODO: save these also? as reference to the duplicate?
             exit(0)
         doc.save(db)
         if doc.is_relevant():
-            links = doc.links()
-            print(f"extracted {len(links)} links")
-            # TODO: implemented batched queuing
-            for link in links:
+            link_count = 0
+            for link in doc.links():
                 queue.push_if_new(link)
+                link_count += 1
+            print(f"extracted {link_count} links")
         else:
             print("document is irrelevant, ignoring links")
 
 
-@c.command()
+@c.command(name="crawl")
 @click.option(
     '--db',
     default=DEFAULT_CRAWLER_DB,
     help='location of the SQLite database file',
     type=click.Path()
 )
-def crawl(db):
+def crawl_loop(db):
+    """
+    Run the crawler loop
+    """
     crawler_loop(db)
 
 @c.command()
@@ -194,8 +200,24 @@ def crawl(db):
     help='location of the SQLite database file to store the index',
     type=click.Path()
 )
-def index_all(crawl_db, index_db):
-    # Index all documents in the crawl database
+@click.option(
+    '--index_sql',
+    default='index.sql',
+    help='SQL to initialize index database tables',
+    type=click.File()
+)
+def index_all(crawl_db, index_db, index_sql):
+    """
+    Index all documents in the crawl database.
+
+    Automatically creates index database file if it does not exist.
+    """
+    if not os.path.exists(index_db):
+        # https://stackoverflow.com/a/54290631
+        sql_script = index_sql.read()
+        db = apsw.Connection(index_db)
+        db.execute(sql_script)
+        db.close()
     crawl.index.index_all_db(crawl_db, index_db)
 
 

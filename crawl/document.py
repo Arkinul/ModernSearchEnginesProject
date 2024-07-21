@@ -1,9 +1,9 @@
 from collections import Counter
+import json
 import re
-import apsw
-from urllib.parse import urljoin
+from urllib.parse import urldefrag, urljoin
 
-from nltk.stem import PorterStemmer
+import apsw
 from bs4 import BeautifulSoup
 
 from crawl import DEFAULT_CRAWLER_DB
@@ -11,6 +11,32 @@ from crawl.process import compute_simhash, is_near_duplicate_simhash, normalize_
 
 # e.g. if 1 out of 100 words is a keyword, site is relevant
 KEYWORD_DENSITY_THRESHOLD = 0.01
+
+
+KEYWORD_WEIGHTS = {
+    "tübingen": 1.0,
+    "hölderlin": 1.0,
+    "hohenzollern": 1.0,
+    "neckar": 1.0,
+    "schwaben": 1.0,
+    "schwäbisch": 1.0,
+    "tübinger": 1.0,
+    "bebenhausen": 1.0,
+    "tubingen": 1.0,
+    "tuebingen": 1.0,
+    "tuebinger": 1.0,
+    "swabian": 1.0,
+    "schwaebisch": 1.0,
+    "schwabisch": 1.0,
+    "t%C3%BCbingen": 1.0
+}
+
+# Stem keywords as well
+STEMMED_KEYWORDS = {
+    preprocess_text(keyword).pop(): weight
+    for keyword, weight
+    in KEYWORD_WEIGHTS.items()
+}
 
 IRRELEVANT_TAGS = [
     "script",
@@ -68,7 +94,15 @@ class Document:
     def parse(self) -> bool:
         try:
             self.soup = BeautifulSoup(self.data, 'html.parser')
-            self.lang = self.soup.html.get('lang') if self.soup.html else None
+            if self.soup.html and (lang_tag := self.soup.html.get('lang')):
+                if type(lang_tag) == str:
+                    self.lang = lang_tag
+                elif lang_tag:
+                    self.lang = lang_tag[0]
+                else:
+                    self.lang = None
+            else: self.lang = None
+
             self.title = self.soup.title.string if self.soup.title else None
             meta_description = self.soup.find(
                 "meta",
@@ -84,7 +118,11 @@ class Document:
 
             text = self.soup.get_text(separator=' ')
             lines = (line.strip() for line in text.splitlines())
-            chunks = (phrase.strip() for line in lines for phrase in line.split())
+            chunks = (
+                phrase.strip()
+                for line in lines
+                for phrase in line.split()
+            )
             self.text_content = ' '.join(chunk for chunk in chunks if chunk)
         except Exception as e:
             print(f"failed to parse {self.url}: {e}")
@@ -93,21 +131,31 @@ class Document:
             return True
 
 
+    def is_english(self) -> bool:
+        if type(self.lang) == str and self.lang.lower().startswith("en"):
+            return True
+        if type(self.headers) == dict:
+            if lang := self.headers.get("Content-Language"):
+                return lang.lower().startswith("en")
+        return False
+
+
     def relevance(self) -> float:
         if self.relevance_score:
             return self.relevance_score
 
-        keywords = {
-            "tübingen": 1.0, "hölderlin": 1.0, "hohenzollern": 1.0,
-            "neckar": 1.0, "schwaben": 1.0, "schwäbisch": 1.0, "tübinger": 1.0,
-            "bebenhausen": 1.0, "tubingen": 1.0, "tuebingen": 1.0, "tuebinger": 1.0,
-            "swabian": 1.0, "schwaebisch": 1.0, "schwabisch": 1.0
-        }
+        if not self.is_english():
+            self.relevance_score = 0.0
+            return self.relevance_score
+
+        # assume documents from URLs containing keywords are relevant
+        url_words = preprocess_text(self.url)
+        for word, weight in STEMMED_KEYWORDS.items():
+            if word in url_words and weight > 0.5:
+                self.relevance_score = 1.0
+                return self.relevance_score
 
         stemmed_words = preprocess_text(self.text_content)  # Stem words on site
-
-        stemmed_keywords = {preprocess_text(keyword).pop(): weight for keyword, weight in
-                            keywords.items()}  # Stem keywords as well
 
         # Count how often each word appears on a site and the number of total words
         word_counts = Counter(stemmed_words)
@@ -115,7 +163,7 @@ class Document:
 
         # Count the number of relevant words on a site
         relevant_count = 0
-        for word, weight in stemmed_keywords.items():
+        for word, weight in STEMMED_KEYWORDS.items():
             if word in word_counts:
                 relevant_count += word_counts[word] * weight
 
@@ -153,10 +201,13 @@ class Document:
     def links(self):
         for link_tag in self.soup.find_all('a', href=True):
             if link := link_tag.get('href'):
-                if link[0] != "#": continue
-                absolute = urljoin(self.url, link)
+                if link[0] == "#": continue
+                absolute = urljoin(self.url, urldefrag(link).url)
                 if not absolute.startswith("http"): continue
-                yield normalize_url(absolute)
+                norm = normalize_url(absolute)
+                is_wiki = re.compile("^https?://([a-z]{2})[.]wikipedia[.]org/")
+                if (m := is_wiki.match(norm)) and m.group(1) != 'en': continue
+                yield norm
 
 
     def save(self, db=DEFAULT_CRAWLER_DB):
@@ -171,14 +222,16 @@ class Document:
                 request_id, \
                 simhash, \
                 relevance, \
+                language, \
                 content \
             ) \
-            VALUES (?1, ?2, ?3, ?4) \
+            VALUES (?1, ?2, ?3, ?4, ?5) \
             RETURNING id",
             (
                 self.request_id,
                 self.simhash().to_bytes(16, byteorder='big'),
                 self.relevance(),
+                self.lang,
                 self.text_content
             )
         ).fetchone()
@@ -188,12 +241,60 @@ class Document:
         else:
             raise Exception("failed to store document")
 
-    def load(self, doc_id, db):
-        con = apsw.Connection(db)
-        row = con.execute("SELECT * FROM document WHERE id = ?", (doc_id,)).fetchone()[0]
+
+    @staticmethod
+    def load(doc_id, db: apsw.Connection | str):
+        doc = Document(None, None, None, None)
+        if type(db) == str:
+            con = apsw.Connection(db)
+        elif type(db) == apsw.Connection:
+            con = db
+        else:
+            raise Exception("invalid db argument")
+        row = con.execute(
+            "SELECT \
+                document.id, \
+                url.url, \
+                request_id, \
+                simhash, \
+                relevance, \
+                content \
+            FROM document \
+            JOIN request ON request_id = request.id \
+            JOIN url ON request.url_id = url.id \
+            WHERE document.id = ?1",
+            (doc_id, )
+        ).fetchone()
         if row:
-            self.id, self.request_id, simhash_bytes, relevance, self.text_content = row
-            self.simhash_value = int.from_bytes(simhash_bytes, byteorder='big')
-            return self
+            (
+                doc.id,
+                doc.url,
+                doc.request_id,
+                simhash_bytes,
+                doc.relevance_score,
+                doc.text_content
+            ) = row
+            doc.simhash_value = int.from_bytes(simhash_bytes, byteorder='big')
+            return doc
         else:
             raise Exception("document not found")
+
+
+    @staticmethod
+    def load_request(request_id, db):
+        con = apsw.Connection(db)
+        row = con.execute(
+            "SELECT url.url, JSON(headers), data \
+            FROM request \
+            JOIN url ON url_id = url.id \
+            WHERE request.id = ?1",
+            (request_id, )
+        ).fetchone()
+        if row:
+            url, headers_json, data = row
+            if not headers_json:
+                return None
+            headers = json.loads(headers_json)
+            doc = Document(request_id, url, headers, data)
+            return doc
+        return None

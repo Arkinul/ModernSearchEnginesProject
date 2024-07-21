@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS "document" (
 	"last_modified"	INTEGER,
 	"simhash"	BLOB NOT NULL,
 	"relevance"	REAL,
+	"language"	TEXT,
 	"content"	TEXT,
 	FOREIGN KEY ("request_id") REFERENCES "request"
 );
@@ -22,7 +23,7 @@ CREATE TABLE IF NOT EXISTS "request" (
 	"headers"	TEXT,
 	"data"	BLOB,
 	FOREIGN KEY("url_id") REFERENCES "url"
-)STRICT;
+) STRICT;
 
 CREATE TABLE IF NOT EXISTS "url" (
 	"id"	INTEGER	PRIMARY KEY,
