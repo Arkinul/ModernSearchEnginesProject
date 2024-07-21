@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.DEBUG)
 # Define route for the homepage
 @app.route('/')
 def index():
-    return render_template('index2.html')
+    return render_template('index.html')
 
 # Define route for search endpoint that accepts POST requests
 @app.route('/generate_word_cloud', methods=['POST'])
