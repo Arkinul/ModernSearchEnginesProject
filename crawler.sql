@@ -59,5 +59,28 @@ CREATE VIEW IF NOT EXISTS "request_urls" AS
 	JOIN url ON url_id = url.id
 	ORDER BY time;
 
+CREATE VIEW IF NOT EXISTS "size_by_extension" AS
+	WITH extension AS (
+		SELECT
+			id,
+			CASE
+				WHEN substr(url, -4) LIKE '%/%' THEN NULL
+				WHEN url LIKE '%.___'  THEN substr(url, -3)
+				WHEN url LIKE '%.____' THEN substr(url, -4)
+			END AS extension
+		FROM url
+	)
+	SELECT
+		extension,
+		COUNT() AS 'count',
+		SUM(length(data)) / COUNT() AS avg_size,
+		SUM(length(data)) AS total
+	FROM request
+	JOIN extension on url_id = extension.id
+	JOIN url on url_id = url.id
+	WHERE extension IS NOT NULL
+	GROUP BY extension
+	ORDER BY total DESC;
+
 COMMIT;
 
