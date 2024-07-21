@@ -57,13 +57,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const maxBubbleSize = 150;
         const minBubbleSize = 50;
 
-        results.forEach((word) => {
+        results.forEach((result) => {
+            const wordElementOuter = document.createElement('a');
+            wordElementOuter.href = result.url;
             const wordElement = document.createElement('span');
-            wordElement.textContent = word.text;
+            wordElement.textContent = result.text;
             wordElement.classList.add('bubble');
-            wordCloudContainer.appendChild(wordElement);
+            wordElementOuter.appendChild(wordElement);
+            wordCloudContainer.appendChild(wordElementOuter);
 
-            const size = (word.value / 100) * (maxBubbleSize - minBubbleSize) + minBubbleSize;
+            const size = (result.value / 100) * (maxBubbleSize - minBubbleSize) + minBubbleSize;
             wordElement.style.width = `${size}px`;
             wordElement.style.height = `${size}px`;
 
