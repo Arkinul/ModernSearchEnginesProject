@@ -303,6 +303,35 @@ class Document:
 
 
     @staticmethod
+    def load_all(con: apsw.Connection):
+        rows = con.execute(
+            "SELECT \
+                document.id, \
+                url.url, \
+                request_id, \
+                simhash, \
+                relevance, \
+                content \
+            FROM document \
+            JOIN request ON request_id = request.id \
+            JOIN url ON request.url_id = url.id",
+        ).fetchall()
+        for row in rows:
+            doc = Document(None, None, None, None)
+            (
+                doc.id,
+                doc.url,
+                doc.request_id,
+                simhash_bytes,
+                doc.relevance_score,
+                doc.text_content
+            ) = row
+            assert type(simhash_bytes) == bytes
+            doc.simhash_value = int.from_bytes(simhash_bytes, byteorder='big')
+            yield doc
+
+
+    @staticmethod
     def load_request(request_id, db: apsw.Connection | str):
         if type(db) == str:
             con = apsw.Connection(db)

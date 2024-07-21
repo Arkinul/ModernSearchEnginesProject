@@ -15,11 +15,9 @@ def index_all_db(crawl_db=DEFAULT_CRAWLER_DB, index_db=DEFAULT_INDEX_DB):
     crawl_con = apsw.Connection(crawl_db)
     index_con = apsw.Connection(index_db)
 
-    max_doc_id = crawl_con.execute(
-        "SELECT MAX(id) FROM document"
-    ).fetchone()[0]
-    for doc_id in tqdm(range(1, max_doc_id + 1)):
-        doc = Document.load(doc_id, db=crawl_con)
+    (total, ) = crawl_con.execute("SELECT COUNT() FROM document").fetchone()
+
+    for doc in tqdm(Document.load_all(crawl_con), total=total):
         index(doc, index_con)
 
 
