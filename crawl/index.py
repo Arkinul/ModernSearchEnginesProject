@@ -29,8 +29,9 @@ def index(doc: Document, con: apsw.Connection):
         try:
             #insert document
             con.execute(
-                "INSERT INTO document (id, content, url) VALUES (?1, ?2, ?3)",
-                (doc.id, doc.text_content, doc.url)
+                "INSERT INTO document (id, content, title, url) \
+                VALUES (?1, ?2, ?3, ?4)",
+                (doc.id, doc.text_content, doc.title, doc.url)
             )
         except apsw.ConstraintError:
             # assumes that the document is fully hashed if it exists

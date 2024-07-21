@@ -3,6 +3,7 @@ BEGIN TRANSACTION;
 CREATE TABLE IF NOT EXISTS "document" (
 	"id"	INTEGER NOT NULL PRIMARY KEY,
 	"content"	TEXT,
+    "title"   TEXT,
     "url" TEXT NOT NULL UNIQUE
 );
 
