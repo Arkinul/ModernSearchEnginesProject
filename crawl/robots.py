@@ -6,6 +6,8 @@ from urllib import error, request
 from urllib.parse import urlparse
 from urllib.robotparser import RobotFileParser
 
+from crawl import DEFAULT_HOSTS_DB
+
 
 # TODO: actually use this when making requests
 USER_AGENT = 'MSE_Crawler'
@@ -17,19 +19,24 @@ HOSTS_DB_SQL = "hosts.sql"
 
 
 class Host:
-    def __init__(self, origin: str, hosts_db_path="hosts.db") -> None:
+    @staticmethod
+    def open_db(hosts_db_path=DEFAULT_HOSTS_DB) -> apsw.Connection:
         existed = os.path.exists(hosts_db_path)
-        self.con = apsw.Connection(hosts_db_path)
+        con = apsw.Connection(hosts_db_path)
         if not existed:
             with open(HOSTS_DB_SQL) as file:
                 schema = file.read()
-                self.con.execute(schema)
+                con.execute(schema)
+        return con
+
+
+    def __init__(self, origin: str):
         self.origin = origin
-        self.load()
+
 
     def fetch(self) -> None:
         """
-        Copy of RobotFileParser.read(), except that it stores the contents in the hosts database
+        Copy of RobotFileParser.read(), with some modifications
         """
         try:
             self.rfp = RobotFileParser()
@@ -43,6 +50,8 @@ class Host:
                 self.global_policy = False
             elif err.code >= 400 and err.code < 500:
                 self.global_policy = True
+            elif err.code >= 500:
+                self.global_policy = False
             else:
                 # TODO make robust (ignore if they can't even serve robots.txt?)
                 raise Exception(
@@ -51,7 +60,7 @@ class Host:
             self.refill_cap = DEFAULT_REFILL_CAP
             self.refill_rate = DEFAULT_REFILL_RATE
             self.tokens = DEFAULT_REFILL_CAP
-            robots_txt = None
+            self.robots_txt = None
         except (error.URLError, UnicodeDecodeError, RemoteDisconnected):
             #TODO: log
             # ignore hosts that have robots.txt with invalid unicode
@@ -60,14 +69,14 @@ class Host:
             self.refill_cap = DEFAULT_REFILL_CAP
             self.refill_rate = DEFAULT_REFILL_RATE
             self.tokens = DEFAULT_REFILL_CAP
-            robots_txt = None
+            self.robots_txt = None
         else:
             # TODO: log this instead of printing
             #print(f"fetched robots.txt for {self.origin}")
 
             # No global allow/disallow policy, store the robots.txt content
             # don't store the raw file, re-serialize the parsed RFP
-            robots_txt = str(self.rfp)
+            self.robots_txt = str(self.rfp)
             # TODO: technically the robots.txt could boil down to a global policy as well
             self.global_policy = None
 
@@ -86,7 +95,13 @@ class Host:
         # TODO: seems to overshoot the intended rate in the very first period
         self.tokens = self.refill_cap
         # TODO: keep track of how old the robots.txt / host entry is
-        self.con.execute(
+
+
+    def store(self, con: apsw.Connection):
+        """
+        Stores the Host & robots.txt in the hosts database
+        """
+        con.execute(
             "INSERT OR REPLACE INTO host ( \
                 origin, \
                 global_policy, \
@@ -100,7 +115,7 @@ class Host:
             (
                 self.origin,
                 self.global_policy,
-                robots_txt,
+                self.robots_txt,
                 self.refill_rate,
                 self.refill_cap,
                 self.updated,
@@ -109,7 +124,7 @@ class Host:
         )
 
 
-    def try_take_token(self, url: str) -> bool | float:
+    def try_take_token(self, con: apsw.Connection, url: str) -> bool | float:
         if self.global_policy == False:
             return False
         if self.global_policy is None:
@@ -119,7 +134,7 @@ class Host:
         # TODO: ensure this is actually atomic (disable journal?, share conn?)
         try:
             # TODO: this breaks if the clock shifts backward
-            self.con.execute(
+            con.execute(
                 "UPDATE host \
                 SET tokens = MIN( \
                         tokens + ((?2 - updated) * refill_rate), \
@@ -143,8 +158,8 @@ class Host:
             return True
 
 
-    def load(self):
-        res = self.con.execute(
+    def try_load(self, con: apsw.Connection) -> bool:
+        res = con.execute(
             "SELECT \
                 origin, \
                 global_policy, \
@@ -170,8 +185,9 @@ class Host:
             if self.global_policy is None:
                 self.rfp = RobotFileParser()
                 self.rfp.parse(robots_txt.splitlines())
+            return True
         else:
-            self.fetch()
+            return False
 
 
 
@@ -189,7 +205,11 @@ def get_host(url):
     return parsed_url.scheme + "://" + parsed_url.netloc
 
 
-def can_crawl(url: str, hosts_db_path="hosts.db") -> bool | float:
+def can_crawl(
+    url: str,
+    con: apsw.Connection | None = None,
+    hosts_db_path=DEFAULT_HOSTS_DB
+) -> bool | float:
     '''
     Determines if the given URL is allowed to be crawled according to the robots.txt rules of the host and the rate-limiter.
     Automatically counts a request against the rate-limiter: assumes that a request will be made if this function returns `True`.
@@ -202,4 +222,4 @@ def can_crawl(url: str, hosts_db_path="hosts.db") -> bool | float:
     bool: `True` if the URL is allowed to be crawled now, `False` if crawling the URL is prohibited.
     float: Time in seconds until this function is expected to return `True`.
     '''
-    return Host(get_host(url), hosts_db_path).try_take_token(url)
+    return Host(get_host(url), con, hosts_db_path).try_take_token(url)

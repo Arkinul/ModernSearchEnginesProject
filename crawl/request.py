@@ -193,8 +193,7 @@ class Request:
 
 
     @staticmethod
-    def stats(db=DEFAULT_CRAWLER_DB):
-        con = apsw.Connection(db)
+    def stats(con: apsw.Connection):
         res = con.execute(
             "SELECT \
                 (SELECT AVG(duration) FROM request), \
@@ -211,8 +210,17 @@ class Request:
         return (avg, rate, ok, failed, timed_out, prohibited)
 
 
-    def check_status(self, db=DEFAULT_CRAWLER_DB) -> Status | float | None:
-        con = apsw.Connection(db)
+    def check_status(
+        self,
+        db: apsw.Connection | str = DEFAULT_CRAWLER_DB
+    ) -> Status | float | None:
+        if type(db) == str:
+            con = apsw.Connection(db)
+        elif type(db) == apsw.Connection:
+            con = db
+        else:
+            raise Exception("invalid db argument")
+
         res = con.execute(
             "SELECT status FROM request \
             JOIN url on url_id = url.id \
@@ -244,7 +252,7 @@ class Request:
         except requests.Timeout:
             self.status = Status.TIMEOUT
         except requests.RequestException as e:
-            print(f"request for {self.url} failed: {e}")
+            #print(f"request for {self.url} failed: {e}")
             self.status = Status.FAILED
         else:
             self.status = Status(response.status_code)
@@ -253,7 +261,7 @@ class Request:
         return self.data is not None
 
 
-    def save(self, db=DEFAULT_CRAWLER_DB) -> int:
+    def save(self, db: apsw.Connection | str = DEFAULT_CRAWLER_DB) -> int:
         """
         Store the request in the database.
         Assumes the URL already exists in the `url` table
@@ -266,7 +274,14 @@ class Request:
             headers = str(self.headers)
         else:
             headers = None
-        con = apsw.Connection(db)
+
+        if type(db) == str:
+            con = apsw.Connection(db)
+        elif type(db) == apsw.Connection:
+            con = db
+        else:
+            raise Exception("invalid db argument")
+
         res = con.execute(
             "INSERT INTO request ( \
                 url_id, \

@@ -1,11 +1,14 @@
 import apsw
-from contextlib import contextmanager
 import warnings
 
 class Index:
-    def __init__(self, db):
-        # https://docs.python.org/3/library/sqlite3.html#transaction-control
-        self.con = apsw.Connection(db)
+    def __init__(self, db: apsw.Connection | str):
+        if type(db) == str:
+            self.con = apsw.Connection(db)
+        elif type(db) == apsw.Connection:
+            self.con = db
+        else:
+            raise Exception("invalid db argument")
         self.con.execute("PRAGMA foreign_keys = 1")
 
 
@@ -93,6 +96,18 @@ class Queue(Index):
                 )",
                 (url_id, )
             )
+
+
+    def push_id(self, url_id: int):
+        # insert frontier entry at the end
+        self.con.execute(
+            "INSERT INTO frontier (position, url_id) \
+            VALUES ( \
+                IFNULL((SELECT max(position) + 1 FROM frontier), 0), \
+                ?1 \
+            )",
+            [url_id]
+        )
 
 
     def push_if_new(self, url):

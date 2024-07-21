@@ -145,7 +145,7 @@ def check_duplicate(page_data):
     return True
 
 
-def normalize_url(url):
+def normalize_url(url) -> str:
     '''
     Normalize the given URL using the url-normalize library.
 

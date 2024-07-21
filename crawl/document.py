@@ -85,16 +85,20 @@ class Document:
         self.text_content = None
         self.request_id = request_id
         self.url = url
-        self.headers = headers
+        if headers:
+            self.language_header = headers.get("Content-Language")
+        else:
+            self.language_header = None
         self.data = data
         self.relevance_score = None
         self.simhash_value = None
         self.id = None
+        self.parsed = False
 
     def parse(self) -> bool:
         try:
-            self.soup = BeautifulSoup(self.data, 'html.parser')
-            if self.soup.html and (lang_tag := self.soup.html.get('lang')):
+            soup = BeautifulSoup(self.data, 'html.parser')
+            if soup.html and (lang_tag := soup.html.get('lang')):
                 if type(lang_tag) == str:
                     self.lang = lang_tag
                 elif lang_tag:
@@ -103,8 +107,8 @@ class Document:
                     self.lang = None
             else: self.lang = None
 
-            self.title = self.soup.title.string if self.soup.title else None
-            meta_description = self.soup.find(
+            self.title = str(soup.title.string) if soup.title else None
+            meta_description = soup.find(
                 "meta",
                 attrs={"name": "description"}
             )
@@ -113,10 +117,10 @@ class Document:
             else:
                 self.meta_description = None
 
-            for tag in self.soup(IRRELEVANT_TAGS):
+            for tag in soup(IRRELEVANT_TAGS):
                 tag.extract()
 
-            text = self.soup.get_text(separator=' ')
+            text = soup.get_text(separator=' ')
             lines = (line.strip() for line in text.splitlines())
             chunks = (
                 phrase.strip()
@@ -128,15 +132,15 @@ class Document:
             print(f"failed to parse {self.url}: {e}")
             return False
         else:
+            self.parsed = True
             return True
 
 
     def is_english(self) -> bool:
         if type(self.lang) == str and self.lang.lower().startswith("en"):
             return True
-        if type(self.headers) == dict:
-            if lang := self.headers.get("Content-Language"):
-                return lang.lower().startswith("en")
+        if self.language_header:
+            return self.language_header.lower().startswith("en")
         return False
 
 
@@ -187,8 +191,17 @@ class Document:
         self.simhash_value = compute_simhash([t for t in texts if t])
         return self.simhash_value
 
-    def check_for_duplicates(self, db=DEFAULT_CRAWLER_DB) -> bool:
-        con = apsw.Connection(db)
+    def check_for_duplicates(
+        self,
+        db: apsw.Connection | str = DEFAULT_CRAWLER_DB
+    ) -> bool:
+        if type(db) == str:
+            con = apsw.Connection(db)
+        elif type(db) == apsw.Connection:
+            con = db
+        else:
+            raise Exception("invalid db argument")
+
         hashes = con.execute("SELECT id, simhash FROM document").fetchall()
         for doc_id, simhash_bytes in hashes:
             assert type(simhash_bytes) == bytes, "invalid simhash type"
@@ -199,7 +212,8 @@ class Document:
         return False
 
     def links(self):
-        for link_tag in self.soup.find_all('a', href=True):
+        soup = BeautifulSoup(self.data, 'html.parser')
+        for link_tag in soup.find_all('a', href=True):
             if link := link_tag.get('href'):
                 if link[0] == "#": continue
                 absolute = urljoin(self.url, urldefrag(link).url)
@@ -210,13 +224,20 @@ class Document:
                 yield norm
 
 
-    def save(self, db=DEFAULT_CRAWLER_DB):
+    def save(self, db: apsw.Connection | str = DEFAULT_CRAWLER_DB):
         """
         Store the document in the database.
         """
         if not self.request_id:
             raise Exception("cannot store document without request id")
-        con = apsw.Connection(db)
+
+        if type(db) == str:
+            con = apsw.Connection(db)
+        elif type(db) == apsw.Connection:
+            con = db
+        else:
+            raise Exception("invalid db argument")
+
         res = con.execute(
             "INSERT INTO document ( \
                 request_id, \
@@ -242,6 +263,7 @@ class Document:
             raise Exception("failed to store document")
 
 
+    # TODO load language as well
     @staticmethod
     def load(doc_id, db: apsw.Connection | str):
         doc = Document(None, None, None, None)
@@ -281,8 +303,14 @@ class Document:
 
 
     @staticmethod
-    def load_request(request_id, db):
-        con = apsw.Connection(db)
+    def load_request(request_id, db: apsw.Connection | str):
+        if type(db) == str:
+            con = apsw.Connection(db)
+        elif type(db) == apsw.Connection:
+            con = db
+        else:
+            raise Exception("invalid db argument")
+
         row = con.execute(
             "SELECT url.url, JSON(headers), data \
             FROM request \

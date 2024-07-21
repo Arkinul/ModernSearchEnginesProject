@@ -7,8 +7,8 @@ from apsw import bestpractice
 import nltk
 import requests
 
-from crawl import DEFAULT_CRAWLER_DB, DEFAULT_INDEX_DB
-from crawl.loop import crawler_loop
+from crawl import DEFAULT_CRAWLER_DB, DEFAULT_HOSTS_DB, DEFAULT_INDEX_DB
+from crawl.loop import Crawler
 from crawl.queue import Queue
 from crawl.request import Request, Status
 from crawl.robots import can_crawl
@@ -129,6 +129,7 @@ def load_urls(db, urls):
     type=click.Path()
 )
 def crawl_next(db):
+    db = apsw.Connection(db)
     queue = Queue(db)
     url = queue.pop()
     if not url:
@@ -191,7 +192,10 @@ def crawl_loop(db):
     """
     Run the crawler loop
     """
-    crawler_loop(db)
+    crawler = Crawler(db, DEFAULT_HOSTS_DB)
+    crawler.start()
+    crawler.run()
+
 
 @c.command()
 @click.option(
