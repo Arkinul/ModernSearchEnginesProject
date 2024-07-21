@@ -2,6 +2,8 @@ import os
 import time
 import click
 import apsw
+from apsw import bestpractice
+
 import nltk
 import requests
 
@@ -16,6 +18,10 @@ import crawl.index
 @click.group()
 def c():
     #print("SQLite version", apsw.sqlite_lib_version())
+    bestpractice.apply(
+        # the last one adds very noisy logging
+        bestpractice.recommended[:-1]
+    )
     pass
 
 
