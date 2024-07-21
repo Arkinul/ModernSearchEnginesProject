@@ -11,7 +11,7 @@ from crawl import DEFAULT_HOSTS_DB
 
 # TODO: actually use this when making requests
 USER_AGENT = 'MSE_Crawler'
-DEFAULT_REFILL_CAP = 10
+DEFAULT_REFILL_CAP = 60
 DEFAULT_REFILL_RATE = DEFAULT_REFILL_CAP / 30
 
 # TODO: make this configurable / robust
