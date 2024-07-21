@@ -1,6 +1,7 @@
 import hashlib
 import math
 from collections import Counter
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 import nltk
@@ -337,6 +338,37 @@ def calculate_bm25_score(query_terms, conn, original_query_terms, weight=2.0):
 
     return sorted(scores.items(), key=lambda item: item[1], reverse=True)[:12]
 
+
+@dataclass
+class Result:
+    url: str
+    title: str | None
+    score: float
+
+    def normalize_score(self, min_score, max_score):
+        if min_score == max_score:
+            self.score = 100
+            return
+        self.score = 100 * (self.score - min_score) / (max_score - min_score)
+
+
+# Function to get the URL for a given document ID
+def result_from_id(doc_id, score, conn) -> Result:
+    """
+    Fetch document URL & title from the index by ID.
+    Construct Result with the given score.
+    """
+    row = conn.execute(
+        "SELECT url, title FROM document WHERE id = ?1",
+        [doc_id]
+    ).fetchone()
+    if row:
+        url, title = row
+        return Result(url, title, score)
+    else:
+        raise Exception(f"no document with id {doc_id} in index")
+
+
 # Function to get the URL for a given document ID
 def get_document_url(doc_id, conn):
     cursor = conn.cursor()
@@ -345,35 +377,33 @@ def get_document_url(doc_id, conn):
     return result[0] if result else None
 
 # Main function to get top 12 documents based on BM25
-def get_top_12_documents(query):
+def get_top_12_results(query):
     db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'index.db')
     conn = apsw.Connection(db_path)
-    
+
     # Optionally set busy timeout
     cursor = conn.cursor()
     cursor.execute("PRAGMA busy_timeout = 30000;")  # 30 seconds
-    
+
     original_query_terms = preprocess_text(query)
     enriched_query_terms, _ = enrich_query(original_query_terms)
-    
+
     print("Original Query Terms:", original_query_terms)
     print("Enriched Query Terms:", enriched_query_terms)
-    
-    top_documents = calculate_bm25_score(enriched_query_terms, conn, original_query_terms)
-    
-    # Get URLs for the top documents
-    top_documents_with_urls = [(get_document_url(doc_id, conn), score) for doc_id, score in top_documents]
-    
-    # Normalize the scores
-    if top_documents_with_urls:
-        scores = [score for _, score in top_documents_with_urls]
-        min_score, max_score = min(scores), max(scores)
-        if min_score != max_score:
-            normalized_docs = [(url, 100 * (score - min_score) / (max_score - min_score)) for url, score in top_documents_with_urls]
-        else:
-            normalized_docs = [(url, 100) for url, score in top_documents_with_urls]
-    else:
-        normalized_docs = []
 
-    conn.close()
-    return normalized_docs
+    top_documents = calculate_bm25_score(enriched_query_terms, conn, original_query_terms)
+
+    # Get URLs for the top documents
+    results = [
+        result_from_id(doc_id, score, conn)
+        for doc_id, score
+        in top_documents
+    ]
+
+    # Normalize the scores
+    scores = [result.score for result in results if result]
+    min_score, max_score = min(scores), max(scores)
+    for result in results:
+        result.normalize_score(min_score, max_score)
+
+    return results
