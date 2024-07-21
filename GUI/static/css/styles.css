@@ -5,7 +5,7 @@ body {
     align-items: center;
     height: 100vh;
     margin: 0;
-    background-color: #f0f0f0;
+    background-color: #333333;
 }
 
 .container {
@@ -13,50 +13,73 @@ body {
     transition: transform 0.5s ease-out;
 }
 
+.search-container {
+    position: relative;
+    display: inline-block;
+}
+
 #searchBar {
     width: 400px;
-    padding: 10px 30px 10px 10px; ;
-    font-size: 14px;
-    margin-bottom: 60px;
-    transition: opacity 0.5s ease-out;
-    background-color: #c6c6c6;
-    outline-color:transparent;
-    border-color: transparent;
+    padding: 15px 20px;
+    font-size: 16px;
+    border: 2px solid #990033;
+    border-radius: 25px;
+    margin-bottom: 30px;
+    transition: box-shadow 0.3s ease;
+    outline: none;
+    background-color: #FFFFFF;
+    color: #333333;
+}
 
-    
-    
+#searchBar:focus {
+    box-shadow: 0 0 10px rgba(153, 0, 51, 0.6);
+}
+
+#closeButton {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 20px;
+    cursor: pointer;
+    color: #990033;
+    display: none;
 }
 
 #wordCloudContainer {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    width: 60%;
+    width: 80%;
     margin: 0 auto;
-    margin-top: auto;
     transition: opacity 0.5s ease-in;
 }
 
-.close-btn {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 20px;
-    cursor: pointer;
-    color: #000;
-    display: none;  /* Hidden by default */
-}
-
-.word {
-    margin: 5px;
+.bubble {
+    margin: 10px;
+    padding: 10px;
     font-weight: bold;
+    color: #FFFFFF;
+    background-color: #990033;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     opacity: 0;
     transition: opacity 0.5s ease-in, transform 0.5s ease-in;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    font-size: 14px;
+    text-align: center;
+    word-wrap: break-word;
+    overflow: hidden;
+    white-space: pre-wrap;
 }
 
-.word:hover {
+.bubble:hover {
     transform: scale(1.2);
+    background-color: #FFFFFF;
+    color: #990033;
 }
 
 .hidden {
@@ -66,6 +89,7 @@ body {
 .visible {
     opacity: 1;
 }
+
 .moved-up {
     transform: translateY(-150px);
 }

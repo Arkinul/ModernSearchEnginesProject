@@ -145,7 +145,7 @@ def check_duplicate(page_data):
     return True
 
 
-def normalize_url(url) -> str:
+def normalize_url(url):
     '''
     Normalize the given URL using the url-normalize library.
 
@@ -193,6 +193,14 @@ def should_crawl(con, url, recrawl_interval_days=30):
                     return True
             return False
     return True
+
+def preprocess_text(text):
+    lemmatizer = WordNetLemmatizer()
+    low = text.lower()
+    words = re.findall(r'\b\w+\b', low)
+    stemmed_words = [lemmatizer.lemmatize(word) for word in words]
+    filtered_words = [word for word in stemmed_words if word not in stopwords.words('english')]
+    return filtered_words
 
 def preprocess_text(text):
     lemmatizer = WordNetLemmatizer()
@@ -279,7 +287,7 @@ k1 = 1.5
 b = 0.75
 
 # Function to calculate BM25 score
-def calculate_bm25_score(query_terms, conn):
+def calculate_bm25_score(query_terms, conn, original_query_terms, weight=2.0):
     query_term_freq = {term: query_terms.count(term) for term in set(query_terms)}
 
     # Get document frequencies and term frequencies
@@ -318,15 +326,16 @@ def calculate_bm25_score(query_terms, conn):
         if term not in doc_freqs:
             continue
         idf = math.log((doc_count - doc_freqs[term] + 0.5) / (doc_freqs[term] + 0.5) + 1)
+        term_weight = weight if term in original_query_terms else 1.0
         for doc_id, term_freq in term_freqs[term].items():
             if doc_id not in scores:
                 scores[doc_id] = 0
             doc_len = doc_lengths.get(doc_id, 0)
             tf = term_freq
-            score = idf * ((tf * (k1 + 1)) / (tf + k1 * (1 - b + b * (doc_len / avg_doc_length))))
+            score = term_weight * idf * ((tf * (k1 + 1)) / (tf + k1 * (1 - b + b * (doc_len / avg_doc_length))))
             scores[doc_id] += score
 
-    return sorted(scores.items(), key=lambda item: item[1], reverse=True)[:100]
+    return sorted(scores.items(), key=lambda item: item[1], reverse=True)[:12]
 
 # Function to get the URL for a given document ID
 def get_document_url(doc_id, conn):
@@ -335,8 +344,8 @@ def get_document_url(doc_id, conn):
     result = cursor.fetchone()
     return result[0] if result else None
 
-# Main function to get top 100 documents based on BM25
-def get_top_100_documents(query):
+# Main function to get top 12 documents based on BM25
+def get_top_12_documents(query):
     db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'index.db')
     conn = apsw.Connection(db_path)
     
@@ -344,31 +353,27 @@ def get_top_100_documents(query):
     cursor = conn.cursor()
     cursor.execute("PRAGMA busy_timeout = 30000;")  # 30 seconds
     
-    top_documents = calculate_bm25_score(query, conn)
+    original_query_terms = preprocess_text(query)
+    enriched_query_terms, _ = enrich_query(original_query_terms)
+    
+    print("Original Query Terms:", original_query_terms)
+    print("Enriched Query Terms:", enriched_query_terms)
+    
+    top_documents = calculate_bm25_score(enriched_query_terms, conn, original_query_terms)
     
     # Get URLs for the top documents
     top_documents_with_urls = [(get_document_url(doc_id, conn), score) for doc_id, score in top_documents]
     
+    # Normalize the scores
+    if top_documents_with_urls:
+        scores = [score for _, score in top_documents_with_urls]
+        min_score, max_score = min(scores), max(scores)
+        if min_score != max_score:
+            normalized_docs = [(url, 100 * (score - min_score) / (max_score - min_score)) for url, score in top_documents_with_urls]
+        else:
+            normalized_docs = [(url, 100) for url, score in top_documents_with_urls]
+    else:
+        normalized_docs = []
+
     conn.close()
-    return top_documents_with_urls
-
-def get_connection(db_path):
-    con = apsw.Connection(db_path)
-    return con
-
-# Hauptfunktion zur Durchführung der Abfrage und Ausgabe der Ergebnisse
-def main(query_text, n=100):
-    preprocessed_query = preprocess_text(query_text)
-    enriched_query, truncated_query = enrich_query(preprocessed_query)
-
-    print("Original Query:", preprocessed_query)
-    print("Enriched Query:", enriched_query)
-    
-    top_docs = get_top_100_documents(enriched_query)
-    
-    for url, score in top_docs:
-        print(f"URL: {url}\nScore: {score}\n{'-'*80}")
-
-# Beispielabfrage
-query_text = "food and drink"
-#main(query_text)
+    return normalized_docs

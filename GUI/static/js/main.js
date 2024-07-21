@@ -34,30 +34,43 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Fetch word cloud data from Flask server
     function fetchWordCloud(query) {
-        // Makes a POST request to the /search endpoint with the query as the JSON body
-        fetch('/search', {
+        fetch('/generate_word_cloud', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ query: query })
+            body: JSON.stringify({ query: query }),
         })
-        // Parses JSON response and calls generateWordCloud() with results
         .then(response => response.json())
-        .then(results => generateWordCloud(results))
-        .catch(error => console.error('Error fetching word cloud:', error));
+        .then(results => {
+            generateWordCloud(results);
+        })
+        .catch(error => {
+            console.error('Error fetching word cloud:', error);
+        });
     }
 
     function generateWordCloud(results) {
         wordCloudContainer.innerHTML = '';
+
+        const maxBubbleSize = 150;
+        const minBubbleSize = 50;
+
         results.forEach((word) => {
             const wordElement = document.createElement('span');
             wordElement.textContent = word.text;
-            wordElement.style.fontSize = `${word.value / 2}px`;
-            wordElement.classList.add('word');
+            wordElement.classList.add('bubble');
             wordCloudContainer.appendChild(wordElement);
+
+            const size = (word.value / 100) * (maxBubbleSize - minBubbleSize) + minBubbleSize;
+            wordElement.style.width = `${size}px`;
+            wordElement.style.height = `${size}px`;
+
+            const fontSize = size * 0.2;
+            wordElement.style.fontSize = `${fontSize}px`;
+
+            adjustFontSizeToFit(wordElement, size);
 
             // Random delay to each word's appearance
             const randomDelay = Math.random() * 2000;
@@ -66,6 +79,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 wordElement.style.transform = 'scale(1)';
             }, randomDelay);
         });
+    }
+
+    function adjustFontSizeToFit(element, size) {
+        const maxFontSize = size * 0.2;
+        let fontSize = maxFontSize;
+        element.style.fontSize = `${fontSize}px`;
+        while (element.scrollWidth > element.clientWidth || element.scrollHeight > element.clientHeight) {
+            fontSize -= 1;
+            element.style.fontSize = `${fontSize}px`;
+            if (fontSize <= 10) break;
+        }
     }
 
     function fadeOut(element, callback) {
