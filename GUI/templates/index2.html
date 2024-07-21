@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MSE Word Cloud</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles2.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="search-container">
+            <input type="text" id="searchBar" placeholder="Your query related to Tübingen...">
+            <span id="closeButton" class="close-btn">&times;</span>
+        </div>
+        <div id="wordCloudContainer" class="hidden"></div>
+    </div>
+    <script src="{{ url_for('static', filename='js/main2.js') }}"></script>
+</body>
+</html>

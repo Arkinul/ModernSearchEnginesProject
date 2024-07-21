@@ -1,0 +1,95 @@
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #333333;
+}
+
+.container {
+    text-align: center;
+    transition: transform 0.5s ease-out;
+}
+
+.search-container {
+    position: relative;
+    display: inline-block;
+}
+
+#searchBar {
+    width: 400px;
+    padding: 15px 20px;
+    font-size: 16px;
+    border: 2px solid #990033;
+    border-radius: 25px;
+    margin-bottom: 30px;
+    transition: box-shadow 0.3s ease;
+    outline: none;
+    background-color: #FFFFFF;
+    color: #333333;
+}
+
+#searchBar:focus {
+    box-shadow: 0 0 10px rgba(153, 0, 51, 0.6);
+}
+
+#closeButton {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 20px;
+    cursor: pointer;
+    color: #990033;
+    display: none;
+}
+
+#wordCloudContainer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 80%;
+    margin: 0 auto;
+    transition: opacity 0.5s ease-in;
+}
+
+.bubble {
+    margin: 10px;
+    padding: 10px;
+    font-weight: bold;
+    color: #FFFFFF;
+    background-color: #990033;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.5s ease-in, transform 0.5s ease-in;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    font-size: 14px;
+    text-align: center;
+    word-wrap: break-word;
+    overflow: hidden;
+    white-space: pre-wrap;
+}
+
+.bubble:hover {
+    transform: scale(1.2);
+    background-color: #FFFFFF;
+    color: #990033;
+}
+
+.hidden {
+    opacity: 0;
+}
+
+.visible {
+    opacity: 1;
+}
+
+.moved-up {
+    transform: translateY(-150px);
+}
