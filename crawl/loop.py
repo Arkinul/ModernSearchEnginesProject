@@ -179,15 +179,15 @@ class Crawler:
                     pipe.send(doc)
                     return
             case document if type(document) == Document:
-                # store the document & check for duplicates
-                # TODO: save dupes also? as reference to the original?
-                if not document.check_for_duplicates(self.crawl_db):
-                    document.save(self.crawl_db)
-                    if document.is_relevant():
+                if document.is_relevant():
+                    # store the document & check for duplicates
+                    # TODO: save dupes also? as reference to the original?
+                    if not document.check_for_duplicates(self.crawl_db):
+                        document.save(self.crawl_db)
                         pipe.send(document)
                         return
             case links if type(links) == list:
-                # TODO: implemented batched queuing
+                # TODO: implement batched queuing
                 for link in links:
                     self.queue.push_if_new(link)
             case None:
