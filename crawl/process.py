@@ -278,7 +278,7 @@ def enrich_query(preprocessed_query, max_total_terms=15, max_terms_per_token=3, 
 k1 = 1.5
 b = 0.75
 
-def calculate_bm25_score(query_terms, conn, original_query_terms, weight=2.0, title_weight=1.3):
+def calculate_bm25_score(query_terms, conn, original_query_terms, weight=2.0, title_weight=1.3, top_n=12):
     query_term_freq = {term: query_terms.count(term) for term in set(query_terms)}
 
     cursor = conn.cursor()
@@ -330,10 +330,10 @@ def calculate_bm25_score(query_terms, conn, original_query_terms, weight=2.0, ti
         if title is None:
             title = ""
         title_terms = preprocess_text(title)
-        if any(term in title_terms for term in original_query_terms if term != "tübingen"):
+        if any(term in title_terms for term in original_query_terms if term != ""):
             scores[doc_id] *= title_weight
 
-    return sorted(scores.items(), key=lambda item: item[1], reverse=True)[:12]
+    return sorted(scores.items(), key=lambda item: item[1], reverse=True)[:top_n]
 
 @dataclass
 class Result:
@@ -377,7 +377,7 @@ def get_top_12_results(query, max_query_terms=50):
     print("Original Query Terms:", original_query_terms)
     print("Enriched Query Terms:", enriched_query_terms)
 
-    top_documents = calculate_bm25_score(enriched_query_terms, conn, original_query_terms)
+    top_documents = calculate_bm25_score(enriched_query_terms, conn, original_query_terms, top_n=12)
 
     results = [result_from_id(doc_id, score, conn) for doc_id, score in top_documents]
 
@@ -387,3 +387,41 @@ def get_top_12_results(query, max_query_terms=50):
         result.normalize_score(min_score, max_score)
 
     return results
+
+def get_top_100_results(query, max_query_terms=50):
+    db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'index.db')
+    conn = apsw.Connection(db_path)
+
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA busy_timeout = 30000;")
+
+    original_query_terms = preprocess_text(query)
+    if len(original_query_terms) > max_query_terms:
+        original_query_terms = truncate_query(original_query_terms, max_terms=max_query_terms)
+
+    enriched_query_terms = enrich_query(original_query_terms)
+
+    print("Original Query Terms:", original_query_terms)
+    print("Enriched Query Terms:", enriched_query_terms)
+
+    top_documents = calculate_bm25_score(enriched_query_terms, conn, original_query_terms, top_n=100)
+
+    results = [result_from_id(doc_id, score, conn) for doc_id, score in top_documents]
+
+    return results
+
+def process_batch_file(input_file, output_file):
+    with open(input_file, 'r', encoding='utf-8') as infile, open(output_file, 'w', encoding='utf-8') as outfile:
+        for line in infile:
+            if not line.strip():  
+                continue
+            parts = line.strip().split()
+            if len(parts) < 2: 
+                continue
+            query_number = parts[0]
+            query_text = ' '.join(parts[1:])
+            results = get_top_100_results(query_text)
+            for rank, result in enumerate(results, start=1):
+                outfile.write(f"{query_number}\t{rank}\t{result.url}\t{result.score}\n")
+
+
