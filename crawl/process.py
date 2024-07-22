@@ -233,7 +233,13 @@ def term_priority(term, term_freq, named_entities):
     length = len(term[0])
     frequency = term_freq[term[0]]
     is_named_entity = term[0] in named_entities
-    return (frequency, is_named_entity, pos in ('NN', 'NNS', 'NNP', 'NNPS'), pos in ('JJ', 'VB'), length)
+    return (
+        frequency,
+        is_named_entity,
+        pos in ('NN', 'NNS', 'NNP', 'NNPS'),
+        pos in ('JJ', 'VB'),
+        length
+    )
 
 def truncate_query(preprocessed_query, max_terms=20):
     tagged_tokens = nltk.pos_tag(preprocessed_query)
