@@ -8,7 +8,6 @@ import nltk
 from nltk.corpus import stopwords, wordnet
 from nltk.stem import WordNetLemmatizer
 from nltk.chunk import ne_chunk
-from nltk import pos_tag
 from nltk.tokenize import word_tokenize
 from nltk.tree import Tree
 from url_normalize import url_normalize
@@ -195,14 +194,16 @@ def should_crawl(con, url, recrawl_interval_days=30):
             return False
     return True
 
+
+lemmatizer = WordNetLemmatizer()
+stop_words = set(stopwords.words('english'))
+
 def preprocess_text(text):
-    lemmatizer = WordNetLemmatizer()
     low = text.lower()
     words = re.findall(r'\b\w+\b', low)
     stemmed_words = [lemmatizer.lemmatize(word) for word in words]
-    filtered_words = [word for word in stemmed_words if word not in stopwords.words('english')]
+    filtered_words = [word for word in stemmed_words if word not in stop_words]
     return filtered_words
-
 
 def find_synonyms(word, max_terms_per_token=3):
     synonyms = set()
@@ -218,7 +219,7 @@ def find_synonyms(word, max_terms_per_token=3):
 
 def named_entities_nltk(text):
     tokens = word_tokenize(text)
-    tagged_tokens = pos_tag(tokens)
+    tagged_tokens = nltk.pos_tag(tokens)
     chunked_tokens = ne_chunk(tagged_tokens)
     entities = set()
     for chunk in chunked_tokens:
@@ -238,7 +239,6 @@ def truncate_query(preprocessed_query, max_terms=20):
     tagged_tokens = nltk.pos_tag(preprocessed_query)
     term_freq = Counter(preprocessed_query)
     
-    # Use NLTK to identify named entities
     named_entities = named_entities_nltk(' '.join(preprocessed_query))
 
     prioritized_tokens = sorted(tagged_tokens, key=lambda term: term_priority(term, term_freq, named_entities), reverse=True)
@@ -254,53 +254,37 @@ def truncate_query(preprocessed_query, max_terms=20):
 
     return most_common_terms
 
-def enrich_query(preprocessed_query, max_total_terms=15, max_terms_per_token=3, truncation_threshold=20):
-    truncated_query = None
+def enrich_query(preprocessed_query, max_total_terms=15, max_terms_per_token=3, truncation_threshold=30):
     if len(preprocessed_query) > truncation_threshold:
-        truncated_query = truncate_query(preprocessed_query, max_terms=truncation_threshold)
-        preprocessed_query = truncated_query
+        preprocessed_query = truncate_query(preprocessed_query, max_terms=truncation_threshold)
     
     enriched_query = set(preprocessed_query)
     
     for token in preprocessed_query:
         synonyms = find_synonyms(token, max_terms_per_token)
-        for term in synonyms:
-            if len(enriched_query) >= max_total_terms:
-                break
-            enriched_query.add(term)
+        enriched_query.update(synonyms)
         if len(enriched_query) >= max_total_terms:
             break
 
-    if len(enriched_query) > max_total_terms:
-        enriched_query = list(enriched_query)[:max_total_terms]
-    
-    return list(enriched_query), truncated_query
+    return list(enriched_query)[:max_total_terms]
 
 # BM25 parameters
 k1 = 1.5
 b = 0.75
 
-# Function to calculate BM25 score
-def calculate_bm25_score(query_terms, conn, original_query_terms, weight=2.0):
+def calculate_bm25_score(query_terms, conn, original_query_terms, weight=2.0, title_weight=1.5):
     query_term_freq = {term: query_terms.count(term) for term in set(query_terms)}
-
-    # Get document frequencies and term frequencies
-    doc_freqs = {}
-    term_freqs = {}
-    doc_lengths = {}
-    doc_count = 0
-    avg_doc_length = 0
 
     cursor = conn.cursor()
     cursor.execute("SELECT COUNT(*) FROM document")
     doc_count = cursor.fetchone()[0]
 
     cursor.execute("SELECT document_id, COUNT(*) as length FROM inverted_index GROUP BY document_id")
-    for row in cursor.fetchall():
-        doc_lengths[row[0]] = row[1]
-        avg_doc_length += row[1]
-    
-    avg_doc_length /= doc_count
+    doc_lengths = {row[0]: row[1] for row in cursor.fetchall()}
+    avg_doc_length = sum(doc_lengths.values()) / doc_count
+
+    term_doc_freq = {}
+    term_doc_positions = {}
 
     for term in query_terms:
         cursor.execute("SELECT id FROM word WHERE word=?", (term,))
@@ -308,20 +292,20 @@ def calculate_bm25_score(query_terms, conn, original_query_terms, weight=2.0):
         if not word_id_row:
             continue
         word_id = word_id_row[0]
-        
+
         cursor.execute("SELECT COUNT(*) FROM inverted_index WHERE word_id=?", (word_id,))
-        doc_freqs[term] = cursor.fetchone()[0]
+        term_doc_freq[term] = cursor.fetchone()[0]
 
         cursor.execute("SELECT document_id, COUNT(*) FROM inverted_index WHERE word_id=? GROUP BY document_id", (word_id,))
-        term_freqs[term] = {row[0]: row[1] for row in cursor.fetchall()}
+        term_doc_positions[term] = {row[0]: row[1] for row in cursor.fetchall()}
 
     scores = {}
     for term, freq in query_term_freq.items():
-        if term not in doc_freqs:
+        if term not in term_doc_freq:
             continue
-        idf = math.log((doc_count - doc_freqs[term] + 0.5) / (doc_freqs[term] + 0.5) + 1)
+        idf = math.log((doc_count - term_doc_freq[term] + 0.5) / (term_doc_freq[term] + 0.5) + 1)
         term_weight = weight if term in original_query_terms else 1.0
-        for doc_id, term_freq in term_freqs[term].items():
+        for doc_id, term_freq in term_doc_positions[term].items():
             if doc_id not in scores:
                 scores[doc_id] = 0
             doc_len = doc_lengths.get(doc_id, 0)
@@ -329,8 +313,21 @@ def calculate_bm25_score(query_terms, conn, original_query_terms, weight=2.0):
             score = term_weight * idf * ((tf * (k1 + 1)) / (tf + k1 * (1 - b + b * (doc_len / avg_doc_length))))
             scores[doc_id] += score
 
-    return sorted(scores.items(), key=lambda item: item[1], reverse=True)[:12]
+    doc_ids = list(scores.keys())
+    if doc_ids:
+        placeholders = ','.join('?' for _ in doc_ids)
+        cursor.execute(f"SELECT id, title FROM document WHERE id IN ({placeholders})", doc_ids)
+        titles = {row[0]: row[1] for row in cursor.fetchall()}
 
+    for doc_id in scores.keys():
+        title = titles.get(doc_id, "")
+        if title is None:
+            title = ""
+        title_terms = preprocess_text(title)
+        if any(term in title_terms for term in original_query_terms):
+            scores[doc_id] *= title_weight
+
+    return sorted(scores.items(), key=lambda item: item[1], reverse=True)[:12]
 
 @dataclass
 class Result:
@@ -344,56 +341,40 @@ class Result:
             return
         self.score = 100 * (self.score - min_score) / (max_score - min_score)
 
-
-# Function to get the URL for a given document ID
 def result_from_id(doc_id, score, conn) -> Result:
-    """
-    Fetch document URL & title from the index by ID.
-    Construct Result with the given score.
-    """
-    row = conn.execute(
-        "SELECT url, title FROM document WHERE id = ?1",
-        [doc_id]
-    ).fetchone()
+    row = conn.execute("SELECT url, title FROM document WHERE id = ?1", [doc_id]).fetchone()
     if row:
         url, title = row
         return Result(url, title, score)
     else:
         raise Exception(f"no document with id {doc_id} in index")
 
-
-# Function to get the URL for a given document ID
 def get_document_url(doc_id, conn):
     cursor = conn.cursor()
     cursor.execute("SELECT url FROM document WHERE id=?", (doc_id,))
     result = cursor.fetchone()
     return result[0] if result else None
 
-# Main function to get top 12 documents based on BM25
-def get_top_12_results(query):
+def get_top_12_results(query, max_query_terms=50):
     db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'index.db')
     conn = apsw.Connection(db_path)
 
-    # Optionally set busy timeout
     cursor = conn.cursor()
-    cursor.execute("PRAGMA busy_timeout = 30000;")  # 30 seconds
+    cursor.execute("PRAGMA busy_timeout = 30000;")
 
     original_query_terms = preprocess_text(query)
-    enriched_query_terms, _ = enrich_query(original_query_terms)
+    if len(original_query_terms) > max_query_terms:
+        original_query_terms = truncate_query(original_query_terms, max_terms=max_query_terms)
+
+    enriched_query_terms = enrich_query(original_query_terms)
 
     print("Original Query Terms:", original_query_terms)
     print("Enriched Query Terms:", enriched_query_terms)
 
     top_documents = calculate_bm25_score(enriched_query_terms, conn, original_query_terms)
 
-    # Get URLs for the top documents
-    results = [
-        result_from_id(doc_id, score, conn)
-        for doc_id, score
-        in top_documents
-    ]
+    results = [result_from_id(doc_id, score, conn) for doc_id, score in top_documents]
 
-    # Normalize the scores
     scores = [result.score for result in results if result]
     min_score, max_score = min(scores), max(scores)
     for result in results:
