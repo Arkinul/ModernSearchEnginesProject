@@ -247,7 +247,7 @@ class Document:
                 title, \
                 content \
             ) \
-            VALUES (?1, ?2, ?3, ?4, ?5) \
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6) \
             RETURNING id",
             (
                 self.request_id,
