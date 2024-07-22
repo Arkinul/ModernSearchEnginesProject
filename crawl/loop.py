@@ -33,12 +33,12 @@ class Crawler:
         self.queue = Queue(self.crawl_db)
 
 
-    def start(self, worker_count=64):
+    def start(self, worker_count=8):
         self.workers = []
         self.pipes = []
         for _ in range(worker_count):
             our, their = mp.Pipe()
-            w = mp.Process(target=Crawler.worker, args=[their])
+            w = mp.Process(target=Crawler.worker, args=[their], daemon=True)
             w.start()
             self.workers.append(w)
             # TODO: this breaks if the frontier is shorter than worker_count
@@ -48,33 +48,41 @@ class Crawler:
 
     @staticmethod
     def worker(pipe: Connection):
-        while work := pipe.recv():
-            match work:
-                case req, host if type(req) == Request and type(host) == Host:
-                    # fetch robots.txt
-                    host.fetch()
-                    pipe.send((req, host))
-                case request if type(request) == Request:
-                    # make the request
-                    request.make()
-                    pipe.send(request)
-                case document if type(document) == Document:
-                    if not document.parsed:
-                        # parse the document & calculate relevance
-                        document.parse()
-                        document.simhash()
-                        # TODO: could skip calculating relevance if duplicate
-                        document.relevance()
-                        pipe.send(document)
-                    else:
-                        # extract links
-                        pipe.send(list(document.links()))
-                case idle_for if type(idle_for) == float:
-                    print(f"idling for {idle_for}s")
-                    time.sleep(idle_for)
-                    pipe.send(None)
-                case other:
-                    raise Exception(f"unexpected work {type(other)}: {other}")
+        try:
+            while work := pipe.recv():
+                result = Crawler.work(work)
+                pipe.send(result)
+        except KeyboardInterrupt:
+            return
+
+    @staticmethod
+    def work(work: Work) -> Result:
+        match work:
+            case req, host if type(req) == Request and type(host) == Host:
+                # fetch robots.txt
+                host.fetch()
+                return (req, host)
+            case request if type(request) == Request:
+                # make the request
+                request.make()
+                return request
+            case document if type(document) == Document:
+                if not document.parsed:
+                    # parse the document & calculate relevance
+                    document.parse()
+                    document.simhash()
+                    # TODO: could skip calculating relevance if duplicate
+                    document.relevance()
+                    return document
+                else:
+                    # extract links
+                    return list(document.links())
+            case idle_for if type(idle_for) == float:
+                print(f"idling for {idle_for}s")
+                time.sleep(idle_for)
+                return None
+            case other:
+                raise Exception(f"unexpected work {type(other)}: {other}")
 
 
     def give_work(self, pipe: Connection):
