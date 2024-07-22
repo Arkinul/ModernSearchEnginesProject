@@ -15,20 +15,20 @@ KEYWORD_DENSITY_THRESHOLD = 0.01
 
 KEYWORD_WEIGHTS = {
     "tübingen": 1.0,
-    "hölderlin": 1.0,
-    "hohenzollern": 1.0,
-    "neckar": 1.0,
-    "schwaben": 1.0,
-    "schwäbisch": 1.0,
-    "tübinger": 1.0,
-    "bebenhausen": 1.0,
     "tubingen": 1.0,
+    "t%C3%BCbingen": 1.0,
     "tuebingen": 1.0,
     "tuebinger": 1.0,
-    "swabian": 1.0,
-    "schwaebisch": 1.0,
-    "schwabisch": 1.0,
-    "t%C3%BCbingen": 1.0
+    "tübinger": 1.0,
+    "hölderlin": 1.0,
+    "bebenhausen": 1.0,
+    "neckar": 0.8,
+    "hohenzollern": 0.7,
+    "swabian": 0.7,
+    "schwaben": 0.7,
+    "schwäbisch": 0.7,
+    "schwaebisch": 0.7,
+    "schwabisch": 0.7,
 }
 
 # Stem keywords as well
