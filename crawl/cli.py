@@ -12,6 +12,7 @@ from crawl.loop import Crawler
 from crawl.queue import Queue
 from crawl.request import Request, Status
 from crawl.robots import can_crawl
+from crawl.process import process_batch_file
 import crawl.index
 
 
@@ -47,6 +48,32 @@ def init_db(db, sql):
     db = apsw.Connection(db)
     db.execute(sql_script)
     db.close()
+
+
+@c.command()
+@click.option(
+    '--index_db',
+    default=DEFAULT_INDEX_DB,
+    help='where to create the SQLite database file',
+    type=click.Path()
+)
+@click.option(
+    '--queries',
+    default='queries.txt',
+    help='Batch query file',
+    type=click.Path()
+)
+@click.option(
+    '--results',
+    default='results.txt',
+    help='Results output file',
+    type=click.Path()
+)
+def query(index_db, queries, results):
+    """
+    Run queries against the index
+    """
+    process_batch_file(index_db, queries, results)
 
 
 @c.command()
