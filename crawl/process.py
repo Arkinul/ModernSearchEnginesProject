@@ -203,13 +203,6 @@ def preprocess_text(text):
     filtered_words = [word for word in stemmed_words if word not in stopwords.words('english')]
     return filtered_words
 
-def preprocess_text(text):
-    lemmatizer = WordNetLemmatizer()
-    low = text.lower()
-    words = re.findall(r'\b\w+\b', low)
-    stemmed_words = [lemmatizer.lemmatize(word) for word in words]
-    filtered_words = [word for word in stemmed_words if word not in stopwords.words('english')]
-    return filtered_words
 
 def find_synonyms(word, max_terms_per_token=3):
     synonyms = set()
