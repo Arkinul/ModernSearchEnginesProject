@@ -22,9 +22,9 @@ class QueueEmpty(Exception):
 #   - Document that needs to be parsed
 #   - Document whose links need to be extracted
 #   - amount of seconds to sleep until new work
-type Work = tuple[Request, Host] | Request | Document | float
+#type Work = tuple[Request, Host] | Request | Document | float
 
-type Result = tuple[Request, Host] | Request | Document | list[str] | None
+#type Result = tuple[Request, Host] | Request | Document | list[str] | None
 
 class Crawler:
     def __init__(self, crawl_db: str, hosts_db: str) -> None:
@@ -56,7 +56,7 @@ class Crawler:
             return
 
     @staticmethod
-    def work(work: Work) -> Result:
+    def work(work):
         match work:
             case req, host if type(req) == Request and type(host) == Host:
                 # fetch robots.txt
@@ -172,7 +172,7 @@ class Crawler:
             return req
 
 
-    def handle_result(self, pipe: Connection, result: Result):
+    def handle_result(self, pipe: Connection, result):
         match result:
             case req, host if type(req) == Request and type(host) == Host:
                 # store robots.txt & get token
