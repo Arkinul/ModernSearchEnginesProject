@@ -15,8 +15,6 @@ import re
 import apsw
 import os
 
-# Absoluter Pfad zur Index-Datenbank
-DEFAULT_INDEX_DB = os.path.abspath('../index.db')  # Angenommen, die Index-Datenbank befindet sich eine Ebene höher im Verzeichnisbaum
 
 def html_cleaner(response, url):
     soup = BeautifulSoup(response.content, 'html.parser')
@@ -388,40 +386,49 @@ def get_top_12_results(query, max_query_terms=50):
 
     return results
 
-def get_top_100_results(query, max_query_terms=50):
-    db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'index.db')
-    conn = apsw.Connection(db_path)
+def get_top_100_results(index_db, query, max_query_terms=50):
+    conn = apsw.Connection(index_db)
 
     cursor = conn.cursor()
     cursor.execute("PRAGMA busy_timeout = 30000;")
 
     original_query_terms = preprocess_text(query)
     if len(original_query_terms) > max_query_terms:
-        original_query_terms = truncate_query(original_query_terms, max_terms=max_query_terms)
+        original_query_terms = truncate_query(
+            original_query_terms,
+            max_terms=max_query_terms
+        )
 
     enriched_query_terms = enrich_query(original_query_terms)
 
     print("Original Query Terms:", original_query_terms)
     print("Enriched Query Terms:", enriched_query_terms)
 
-    top_documents = calculate_bm25_score(enriched_query_terms, conn, original_query_terms, top_n=100)
+    top_documents = calculate_bm25_score(
+        enriched_query_terms,
+        conn,
+        original_query_terms,
+        top_n=100
+    )
 
     results = [result_from_id(doc_id, score, conn) for doc_id, score in top_documents]
 
     return results
 
-def process_batch_file(input_file, output_file):
-    with open(input_file, 'r', encoding='utf-8') as infile, open(output_file, 'w', encoding='utf-8') as outfile:
+def process_batch_file(index_db, in_file, out_file):
+    with open(in_file, 'r', encoding='utf-8') as infile, open(out_file, 'w', encoding='utf-8') as outfile:
         for line in infile:
-            if not line.strip():  
+            if not line.strip():
                 continue
             parts = line.strip().split()
-            if len(parts) < 2: 
+            if len(parts) < 2:
                 continue
             query_number = parts[0]
             query_text = ' '.join(parts[1:])
-            results = get_top_100_results(query_text)
+            results = get_top_100_results(index_db, query_text)
             for rank, result in enumerate(results, start=1):
-                outfile.write(f"{query_number}\t{rank}\t{result.url}\t{result.score}\n")
+                outfile.write(
+                    f"{query_number}\t{rank}\t{result.url}\t{result.score}\n"
+                )
 
 
