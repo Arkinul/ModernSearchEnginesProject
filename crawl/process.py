@@ -272,7 +272,7 @@ def enrich_query(preprocessed_query, max_total_terms=15, max_terms_per_token=3, 
 k1 = 1.5
 b = 0.75
 
-def calculate_bm25_score(query_terms, conn, original_query_terms, weight=2.0, title_weight=1.5):
+def calculate_bm25_score(query_terms, conn, original_query_terms, weight=2.0, title_weight=1.3):
     query_term_freq = {term: query_terms.count(term) for term in set(query_terms)}
 
     cursor = conn.cursor()
@@ -324,7 +324,7 @@ def calculate_bm25_score(query_terms, conn, original_query_terms, weight=2.0, ti
         if title is None:
             title = ""
         title_terms = preprocess_text(title)
-        if any(term in title_terms for term in original_query_terms):
+        if any(term in title_terms for term in original_query_terms if term != "tübingen"):
             scores[doc_id] *= title_weight
 
     return sorted(scores.items(), key=lambda item: item[1], reverse=True)[:12]
